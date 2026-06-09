@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useRef, useMemo, useCallback } from 'react';
@@ -291,7 +292,7 @@ export default function NewEventPage() {
     setMarketBrief(null);
     marketContextRef.current = null;
     try {
-      const res = await fetch('/api/ai/event-brief', {
+      const res = await apiFetch('/api/ai/event-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventType, scale, lang }),
@@ -312,7 +313,7 @@ export default function NewEventPage() {
     setView('ai-loading');
     setAiError('');
     try {
-      const res = await fetch('/api/ai/parse-brief', {
+      const res = await apiFetch('/api/ai/parse-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: aiPrompt }),

@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -430,7 +431,7 @@ export default function AgentPilotPage() {
     setHasRun(false);
 
     try {
-      const res = await fetch('/api/ai/auto-pilot', {
+      const res = await apiFetch('/api/ai/auto-pilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventData: currentEvent }),

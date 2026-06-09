@@ -22,6 +22,7 @@ import SocialProofStrip from '@/components/landing/SocialProofStrip';
 import CommunitySection from '@/components/landing/CommunitySection';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import BrandLogo from '@/components/BrandLogo';
 
 /* ── Data ─────────────────────────────────────────────────────── */
 
@@ -136,9 +137,7 @@ export default function HomePage() {
         className="landing-nav"
         style={{ top: bannerVisible ? '40px' : '0', transition: 'top 0.25s ease' }}
       >
-        <Link href="/" className="landing-wordmark">
-          Run<em>IT</em>
-        </Link>
+        <BrandLogo href="/" size={28} variant="landing" priority />
         <div className="landing-nav-actions flex items-center gap-2 sm:gap-4">
           <Link href="/workflow" className="landing-nav-link" style={{ display: 'none' }}
             aria-label="How it works"
@@ -477,17 +476,17 @@ export default function HomePage() {
 
       {/* ── FOOTER ──────────────────────────────────── */}
       <footer className="landing-footer">
-        <Link href="/" className="landing-wordmark" style={{ fontSize: '1rem' }}>
-          Run<em>IT</em>
-        </Link>
+        <BrandLogo href="/" size={24} variant="landing" wordmarkClassName="landing-wordmark" />
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <button 
-            onClick={handleBypass}
-            className="text-xs text-gray-500 hover:text-[var(--landing-teal)] transition-colors border border-gray-800 rounded px-3 py-1 bg-gray-900/50"
-            title="Use this to preview the workspace without saving data to Firebase"
-          >
-            Bypass Login (Trial Mode)
-          </button>
+          {process.env.NODE_ENV !== 'production' && (
+            <button
+              onClick={handleBypass}
+              className="text-xs text-gray-500 hover:text-[var(--landing-teal)] transition-colors border border-gray-800 rounded px-3 py-1 bg-gray-900/50"
+              title="Use this to preview the workspace without saving data to Firebase"
+            >
+              Bypass Login (Trial Mode)
+            </button>
+          )}
           <span className="landing-footer-copy">
             © 2026 RUNIT AI · OPERATIONAL INTELLIGENCE
           </span>

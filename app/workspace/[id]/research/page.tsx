@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -84,7 +85,7 @@ export default function ResearchPage() {
       : undefined;
 
     try {
-      const res = await fetch('/api/ai/research', {
+      const res = await apiFetch('/api/ai/research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, effort, eventContext, lang }),
@@ -120,7 +121,7 @@ export default function ResearchPage() {
       : undefined;
 
     try {
-      const res = await fetch('/api/ai/sponsor-profile', {
+      const res = await apiFetch('/api/ai/sponsor-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ urls: validUrls, eventMasterPlan, lang }),

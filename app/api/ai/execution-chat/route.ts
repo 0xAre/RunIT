@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/require-api-auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+export const runtime = 'nodejs';
+
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -72,6 +75,8 @@ RESPONSE GUIDELINES:
 }
 
 export async function POST(req: NextRequest) {
+  const authError = await requireApiAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const {

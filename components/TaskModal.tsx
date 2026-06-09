@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, AlertTriangle, CheckCircle, Save, GitBranch, MapPin, Search, Bot, MessageCircle, Copy, Loader2 } from 'lucide-react';
@@ -25,7 +26,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
     if (!sourcingQuery) return;
     setIsSearching(true);
     try {
-      const res = await fetch('/api/ai/sourcing', {
+      const res = await apiFetch('/api/ai/sourcing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: sourcingQuery, locationContext: currentEvent?.name, taskTitle: task?.title || '' }),

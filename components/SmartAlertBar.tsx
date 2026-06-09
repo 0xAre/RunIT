@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Clock, ChevronRight, Loader2, X } from 'lucide-react';
@@ -39,7 +40,7 @@ export default function SmartAlertBar({ tasks, eventData }: SmartAlertBarProps) 
     const primaryTask = overdueTasks[0] || blockedTasks[0];
 
     try {
-      const res = await fetch('/api/ai/draft-action', {
+      const res = await apiFetch('/api/ai/draft-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

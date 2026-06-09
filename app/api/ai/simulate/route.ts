@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/require-api-auth';
 import { runDisruptionSimulation } from '@/lib/gemini';
 import { deepResearch } from '@/lib/you';
+export const runtime = 'nodejs';
+
 
 export async function POST(req: NextRequest) {
+  const authError = await requireApiAuth(req);
+  if (authError) return authError;
   try {
     const { eventData, scenario, customScenario, lang } = await req.json();
     const scenarioText = customScenario || scenario;

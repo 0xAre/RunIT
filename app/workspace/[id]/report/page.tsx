@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -62,7 +63,7 @@ export default function ReportPage() {
       const allModules: PostEventModule[] = ['report', 'sponsor-report', 'survey', 'thank-you', 'lessons', 'template'];
       if (currentEvent.budgetTracker) allModules.push('reconciliation');
 
-      const res = await fetch('/api/ai/generate-report', {
+      const res = await apiFetch('/api/ai/generate-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventData: currentEvent, modules: allModules }),
@@ -85,7 +86,7 @@ export default function ReportPage() {
     setGenerating(true);
     setError(null);
     try {
-      const res = await fetch('/api/ai/generate-report', {
+      const res = await apiFetch('/api/ai/generate-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventData: currentEvent, modules: [module] }),

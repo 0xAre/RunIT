@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useEffect, useState, useCallback } from 'react';
 
 
@@ -254,7 +255,7 @@ export default function MasterPlanPage() {
         sessionStorage.removeItem(marketContextKey);
       }
 
-      const res = await fetch('/api/ai/master-plan', {
+      const res = await apiFetch('/api/ai/master-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...currentEvent, lang, marketContext }),

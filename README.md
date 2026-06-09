@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="public/logo.png" alt="RunIT logo" width="96" height="96" />
+
 # RunIT
 
 **From one brief to full event execution — AI runs the ops, you run the show.**

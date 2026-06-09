@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useLangStore } from '@/store/langStore';
 import { dict } from '@/lib/i18n';
+import BrandLogo from '@/components/BrandLogo';
 
 /* ── Stage config ─────────────────────────────────────────────── */
 const STAGE_COLOR: Record<string, string> = {
@@ -88,7 +90,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       if (currentEvent.dataLanguage && currentEvent.dataLanguage !== lang) {
         setIsTranslatingData(true);
         try {
-          const res = await fetch('/api/ai/translate', {
+          const res = await apiFetch('/api/ai/translate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ masterPlan: currentEvent.masterPlan, targetLang: lang })
@@ -172,14 +174,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           flexShrink: 0,
         }}>
-          <Link href="/" style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '1.25rem', fontWeight: 700,
-            color: 'var(--color-text-primary)',
-            letterSpacing: '-0.02em', textDecoration: 'none',
-          }}>
-            Run<em style={{ fontStyle: 'normal', color: 'var(--color-mint)' }}>IT</em>
-          </Link>
+          <BrandLogo href="/" size={30} />
           <button
             onClick={toggleLang}
             className="btn-ghost"

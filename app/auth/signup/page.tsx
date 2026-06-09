@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { ArrowRight, User, Mail, Lock } from 'lucide-react';
+import BrandLogo from '@/components/BrandLogo';
 
 /* ── Colosseum CornerSquare — exact CSS from arena.colosseum.org ── */
 function CornerFrame({
@@ -142,13 +143,7 @@ export default function SignUpPage() {
         padding: '0 var(--space-2xl)',
         justifyContent: 'space-between',
       }}>
-        <Link href="/" style={{
-          fontFamily: 'var(--font-heading)', fontSize: '1rem',
-          fontWeight: 700, color: 'var(--color-text-primary)',
-          letterSpacing: '-0.01em',
-        }}>
-          Run<em style={{ fontStyle: 'normal', color: 'var(--color-mint)' }}>IT</em>
-        </Link>
+        <BrandLogo href="/" size={28} />
         <span style={{
           fontFamily: 'var(--font-mono)', fontSize: 'var(--text-caption)',
           color: 'var(--color-text-muted)', letterSpacing: '0.08em',

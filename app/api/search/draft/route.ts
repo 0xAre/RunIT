@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/require-api-auth';
 import type { OsmPlace } from '@/app/api/search/places/route';
 import { generateWithFallback } from '@/lib/gemini';
+export const runtime = 'nodejs';
+
 
 interface EventContext {
   name: string;
@@ -37,6 +40,8 @@ function buildFallbackDraft(place: OsmPlace, ctx: EventContext): DraftResponse {
 }
 
 export async function POST(req: NextRequest) {
+  const authError = await requireApiAuth(req);
+  if (authError) return authError;
   try {
     const body: DraftRequest = await req.json();
     const { place, eventContext: ctx, draftType = 'inquiry' } = body;

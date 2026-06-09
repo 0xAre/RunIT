@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEventStore } from '@/store/eventStore';
@@ -287,7 +288,7 @@ export default function ControlRoomPage() {
     reader.onload = async (event) => {
       const base64 = event.target?.result as string;
       try {
-        const res = await fetch('/api/ai/diagnose-image', {
+        const res = await apiFetch('/api/ai/diagnose-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageBase64: base64, tasks: execution?.dagTasks || [] }),
@@ -398,7 +399,7 @@ export default function ControlRoomPage() {
     setActiveIncident(incident);
 
     try {
-      const res = await fetch('/api/dag/propagate', {
+      const res = await apiFetch('/api/dag/propagate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/require-api-auth';
 import { generateIncidentResponse } from '@/lib/gemini';
 import { searchYouCom } from '@/lib/you';
+export const runtime = 'nodejs';
+
 
 export async function POST(req: NextRequest) {
+  const authError = await requireApiAuth(req);
+  if (authError) return authError;
   try {
     const { eventData, incident, lang = 'en' } = await req.json();
 

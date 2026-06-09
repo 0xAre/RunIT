@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/require-api-auth';
 
 /* ── Types ──────────────────────────────────────────────────── */
 export interface OsmPlace {
@@ -324,8 +325,13 @@ async function searchOsmPlaces(
 
 import { searchYouCom } from '@/lib/you';
 
+export const runtime = 'nodejs';
+
+
 /* ── POST handler ────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
+  const authError = await requireApiAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { lat, lng, radiusKm = 5, category = 'venue', limit = 15, locationName = '' } = body as {

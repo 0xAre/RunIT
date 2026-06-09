@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,7 +31,7 @@ const PlaceActionCard = dynamic(() => import('@/components/PlaceActionCard'), { 
 /* ── Geocode venue address ────────────────────────────────── */
 async function geocodeVenue(address: string): Promise<{ lat: number; lng: number } | null> {
   try {
-    const res = await fetch('/api/search/geocode', {
+    const res = await apiFetch('/api/search/geocode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: address }),
@@ -42,7 +43,7 @@ async function geocodeVenue(address: string): Promise<{ lat: number; lng: number
 
 /* ── Search places via script engine ─────────────────────── */
 async function searchPlaces(lat: number, lng: number, category: SearchCategory, radiusKm: number, locationName: string): Promise<{ places: OsmPlace[], youRecommendations: any[] }> {
-  const res = await fetch('/api/search/places', {
+  const res = await apiFetch('/api/search/places', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ lat, lng, radiusKm, category, limit: 12, locationName }),

@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useEventStore, type DagTask } from '@/store/eventStore';
@@ -74,7 +75,7 @@ export default function TasksBoardPage() {
     };
 
     try {
-      const res = await fetch('/api/ai/draft-action', {
+      const res = await apiFetch('/api/ai/draft-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

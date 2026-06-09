@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -68,7 +69,7 @@ export default function SimulatePage() {
 
     try {
       const { lang } = useLangStore.getState();
-      const res = await fetch('/api/ai/simulate', {
+      const res = await apiFetch('/api/ai/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventData: currentEvent, scenario: scenarioText, customScenario: isCustom ? customScenario : undefined, lang }),

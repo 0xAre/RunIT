@@ -14,7 +14,8 @@ export default function WorkspaceLayout({
 
   useEffect(() => {
     if (!loading) {
-      if (!user && !isBypassed) {
+      const allowBypass = process.env.NODE_ENV !== 'production' && isBypassed;
+      if (!user && !allowBypass) {
         router.push('/');
       }
     }
@@ -28,8 +29,10 @@ export default function WorkspaceLayout({
     );
   }
 
+  const allowBypass = process.env.NODE_ENV !== 'production' && isBypassed;
+
   // Prevent rendering children briefly if redirecting
-  if (!user && !isBypassed) {
+  if (!user && !allowBypass) {
     return null;
   }
 

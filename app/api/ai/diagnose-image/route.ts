@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/require-api-auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { DagTask } from '@/lib/dag-engine';
+export const runtime = 'nodejs';
+
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: NextRequest) {
+  const authError = await requireApiAuth(req);
+  if (authError) return authError;
   try {
     const { imageBase64, tasks } = await req.json() as { imageBase64: string, tasks: DagTask[] };
 

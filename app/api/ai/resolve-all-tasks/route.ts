@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/require-api-auth';
 import { resolveAllTasksBatch } from '@/lib/gemini';
+export const runtime = 'nodejs';
+
 
 export const maxDuration = 300; // 5 minutes for batch processing
 
 export async function POST(req: Request) {
+  const authError = await requireApiAuth(req as any);
+  if (authError) return authError;
   try {
     const { tasks, eventData } = await req.json();
 

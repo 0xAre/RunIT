@@ -37,15 +37,30 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://runit.web.app"
+  ),
   title: "RunIT — AI Event Execution System",
   description:
     "AI-powered operational execution and simulation system that helps teams transform event chaos into coordinated real-world execution.",
   keywords: ["event management", "AI", "event planning", "operational intelligence", "simulation"],
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    apple: [{ url: "/icon.png", type: "image/png" }],
+  },
   openGraph: {
     title: "RunIT — Simulate. Prepare. Execute.",
     description:
       "Turn event chaos into operational clarity with AI-powered simulation and execution intelligence.",
     type: "website",
+    images: [{ url: "/logo.png", width: 512, height: 512, alt: "RunIT" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "RunIT — AI Event Execution System",
+    description:
+      "Turn event chaos into operational clarity with AI-powered simulation and execution intelligence.",
+    images: ["/logo.png"],
   },
 };
 

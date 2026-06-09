@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiAuth } from "@/lib/require-api-auth";
 import { profileSponsorURLs } from "@/lib/you";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+export const runtime = 'nodejs';
+
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 export async function POST(req: NextRequest) {
+  const authError = await requireApiAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { urls, eventMasterPlan, lang = "id" } = body;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/require-api-auth';
 import {
   processCrisisInjection,
   calculateDivisionLoad,
@@ -7,6 +8,8 @@ import {
   type CrisisInjection,
 } from '@/lib/dag-engine';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+export const runtime = 'nodejs';
+
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -26,6 +29,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
  * }
  */
 export async function POST(req: NextRequest) {
+  const authError = await requireApiAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const {

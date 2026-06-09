@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -83,7 +84,7 @@ export default function PlaceActionCard({
     if (draft) { setShowDraft(true); return; }
     setDraftLoading(true);
     try {
-      const res = await fetch('/api/search/draft', {
+      const res = await apiFetch('/api/search/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ place, eventContext }),

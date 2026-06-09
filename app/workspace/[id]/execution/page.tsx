@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -111,7 +112,7 @@ function AIChatPanel({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/ai/execution-chat', {
+      const res = await apiFetch('/api/ai/execution-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -881,7 +882,7 @@ export default function ExecutionPage() {
 
   const handleVoiceCommand = useCallback(async (text: string) => {
     try {
-      const res = await fetch('/api/ai/copilot', {
+      const res = await apiFetch('/api/ai/copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -928,7 +929,7 @@ export default function ExecutionPage() {
         divisionId: t.divisionId, divisionName: divisions.find(d => d.id === t.divisionId)?.name,
       }));
 
-      const res = await fetch('/api/ai/resolve-all-tasks', {
+      const res = await apiFetch('/api/ai/resolve-all-tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tasks: tasksToSend, eventData: currentEvent }),
@@ -1005,7 +1006,7 @@ export default function ExecutionPage() {
         category: t.category,
       }));
 
-      const res = await fetch('/api/ai/auto-resolve-pipeline', {
+      const res = await apiFetch('/api/ai/auto-resolve-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tasks: tasksToSend, eventData: currentEvent }),

@@ -8,6 +8,7 @@ import { dict } from '@/lib/i18n';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import '../landing.css';
+import BrandLogo from '@/components/BrandLogo';
 
 /* ── Stage Data ──────────────────────────────────────────── */
 const STAGES = [
@@ -229,9 +230,7 @@ export default function WorkflowPage() {
 
       {/* ── Top Nav ─────────────────────────────────────── */}
       <nav className="workflow-topnav">
-        <Link href="/" className="landing-wordmark" style={{ fontSize: '1.1rem' }}>
-          Run<em>IT</em>
-        </Link>
+        <BrandLogo href="/" size={26} variant="landing" />
         <Link href="/" className="landing-nav-link" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <ArrowLeft size={14} />
           {t.workflowNavBack}
@@ -444,9 +443,7 @@ export default function WorkflowPage() {
 
       {/* ── Footer ───────────────────────────────────────── */}
       <footer className="landing-footer">
-        <Link href="/" className="landing-wordmark" style={{ fontSize: '1rem' }}>
-          Run<em>IT</em>
-        </Link>
+        <BrandLogo href="/" size={24} variant="landing" />
         <span className="landing-footer-copy">© 2026 RUNIT AI · OPERATIONAL INTELLIGENCE</span>
       </footer>
 

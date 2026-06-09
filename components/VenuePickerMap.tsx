@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,7 +59,7 @@ async function geocodeSearch(query: string): Promise<{ lat: number; lng: number;
 
   // Fallback to OSM API
   try {
-    const res = await fetch('/api/search/geocode', {
+    const res = await apiFetch('/api/search/geocode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
@@ -88,7 +89,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 
   // Fallback to OSM API
   try {
-    const res = await fetch('/api/search/geocode', {
+    const res = await apiFetch('/api/search/geocode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reverse: true, lat, lng }),
@@ -163,7 +164,7 @@ export default function VenuePickerMap({
         return;
       }
       try {
-        const res = await fetch('/api/config/maps');
+        const res = await apiFetch('/api/config/maps');
         const data = await res.json();
         if (data.apiKey) {
           const script = document.createElement('script');
@@ -268,7 +269,7 @@ export default function VenuePickerMap({
         // Google maps not loaded, fallback to our old endpoint if we want, or just wait.
         // I will fallback to old endpoint just in case it works for some reason.
         try {
-          const res = await fetch('/api/search/autocomplete', {
+          const res = await apiFetch('/api/search/autocomplete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ input: val }),
@@ -330,7 +331,7 @@ export default function VenuePickerMap({
     setSearching(true);
     setPlaces([]);
     try {
-      const res = await fetch('/api/search/places', {
+      const res = await apiFetch('/api/search/places', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lat: center[0], lng: center[1], radiusKm, category: searchCat, limit: 12, locationName: addressLabel }),

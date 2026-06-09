@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,7 +59,7 @@ export default function IncidentPage() {
     setResponse(null);
 
     try {
-      const res = await fetch('/api/ai/incident', {
+      const res = await apiFetch('/api/ai/incident', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventData: currentEvent, incident }),

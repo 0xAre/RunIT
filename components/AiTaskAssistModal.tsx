@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api-fetch';
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, X, FileUp, CheckCircle2, Loader2, Paperclip, Star, MapPin, ExternalLink, Save, FileText, ClipboardCheck, Download, Send, MessageCircle, Mail, Phone } from 'lucide-react';
@@ -48,7 +49,7 @@ export default function AiTaskAssistModal({ task, eventData, onClose, onApply }:
   useEffect(() => {
     async function resolveTask() {
       try {
-        const res = await fetch('/api/ai/resolve-task', {
+        const res = await apiFetch('/api/ai/resolve-task', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ task, eventData }),
@@ -144,7 +145,7 @@ export default function AiTaskAssistModal({ task, eventData, onClose, onApply }:
     setDocGenError(null);
     setDocGenType(type);
     try {
-      const res = await fetch('/api/ai/generate-document', {
+      const res = await apiFetch('/api/ai/generate-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task, eventData, docType: type }),
