@@ -45,8 +45,11 @@ export const metadata: Metadata = {
     "AI-powered operational execution and simulation system that helps teams transform event chaos into coordinated real-world execution.",
   keywords: ["event management", "AI", "event planning", "operational intelligence", "simulation"],
   icons: {
-    icon: [{ url: "/icon.png", type: "image/png" }],
-    apple: [{ url: "/icon.png", type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
   },
   openGraph: {
     title: "RunIT — Simulate. Prepare. Execute.",
@@ -75,6 +78,9 @@ export default function RootLayout({
       className={`${manrope.variable} ${inter.variable} ${unbounded.variable} ${jetbrainsMono.variable}`}
     >
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icon.png" type="image/png" sizes="192x192" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
         {/* DNS prefetch for external services */}
         <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
         <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com" />
