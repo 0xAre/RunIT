@@ -181,9 +181,9 @@ API endpoint untuk remote task classification.
 classifyAllTasks: (classifications: Array<{ taskId: string; category: TaskCategory }>) => void;
 ```
 
-### File: `app/workspace/[id]/blueprint/page.tsx`
+### File: `app/workspace/[id]/master-plan/page.tsx`
 
-- `autoClassifyTasks()` dipanggil setelah blueprint generation
+- `autoClassifyTasks()` dipanggil setelah master plan generation
 - Category badges di compact view + full view
 - "Classify Tasks" button di header
 
@@ -305,7 +305,7 @@ logCommunication: (contactId, log) => void;
 export interface BudgetLineItem {
   id: string; category: string; name: string;
   estimated: number; actual: number; notes: string;
-  source: 'ai-blueprint' | 'ai-document' | 'manual';
+  source: 'ai-masterplan' | 'ai-document' | 'manual';
   taskId?: string; status: 'pending' | 'paid' | 'over-budget' | 'on-track';
 }
 
@@ -411,11 +411,11 @@ File duplicate — TypeScript resolve `.ts` sebelum `.tsx`, menyebabkan `AuthPro
 // AFTER: get() pattern with explicit Task return type
 updateTaskResolution: (taskId, notes, attachments) => {
   const state = get();
-  const newDivisions: Division[] = state.currentEvent.blueprint.divisions.map(div => ({
+  const newDivisions: Division[] = state.currentEvent.masterPlan.divisions.map(div => ({
     ...div,
     tasks: div.tasks.map((t): Task => /* ... */)
   }));
-  set({ currentEvent: { ...state.currentEvent, blueprint: { ...state.currentEvent.blueprint, divisions: newDivisions } } });
+  set({ currentEvent: { ...state.currentEvent, masterPlan: { ...state.currentEvent.masterPlan, divisions: newDivisions } } });
 };
 ```
 

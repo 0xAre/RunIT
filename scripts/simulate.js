@@ -99,22 +99,22 @@ const delay = (ms) => new Promise((res) => setTimeout(res, ms));
         await delay(ACTION_DELAY);
       }
 
-      // 8. Klik tombol "Launch Blueprint Sekarang"
-      console.log('Menjalankan Blueprint...');
+      // 8. Klik tombol "Launch Master Plan Sekarang"
+      console.log('Menjalankan Master Plan...');
       const launchBtns = await page.$$('button');
       for (let b of launchBtns) {
         const text = await page.evaluate(el => el.textContent, b);
-        if (text && text.includes('Launch Blueprint Sekarang')) {
+        if (text && text.includes('Launch Master Plan Sekarang')) {
           await b.click();
           break;
         }
       }
 
-      // Tunggu proses redirect ke halaman blueprint
+      // Tunggu proses redirect ke halaman master plan
       await page.waitForNavigation({ waitUntil: 'networkidle2' });
       await delay(2000);
 
-      console.log('Selesai! Sekarang berada di halaman Blueprint.');
+      console.log('Selesai! Sekarang berada di halaman Master Plan.');
       // Biarkan browser terbuka sekitar 10 detik agar bisa direkam akhirannya
       await delay(10000);
     } else {

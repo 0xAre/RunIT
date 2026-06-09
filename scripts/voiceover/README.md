@@ -5,7 +5,7 @@
 ```
 voiceover/
 ├── segment_01.txt          # Skrip: HOOK - Problem Statement
-├── segment_02.txt          # Skrip: AI Blueprint Generator
+├── segment_02.txt          # Skrip: AI Master Plan Generator
 ├── segment_03.txt          # Skrip: AI Task Agents + Auto-Pilot
 ├── segment_04.txt          # Skrip: DAG Execution Engine + Simulation
 ├── segment_05.txt          # Skrip: Live Control Room + Voice AI Copilot

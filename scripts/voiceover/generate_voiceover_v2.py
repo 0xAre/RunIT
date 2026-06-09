@@ -18,7 +18,7 @@ RATE = "+5%"
 
 SEGMENTS = [
     ("segment_01_v2", "HOOK - Problem Statement"),
-    ("segment_02_v2", "AI Blueprint Generator"),
+    ("segment_02_v2", "AI Master Plan Generator"),
     ("segment_03_v2", "AI Task Agents + Auto-Pilot"),
     ("segment_04_v2", "DAG Execution Engine + Simulation"),
     ("segment_05_v2", "Live Control Room + Voice AI Copilot"),

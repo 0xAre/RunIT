@@ -9,7 +9,7 @@ seluruh operational intelligence
 tersimpan dan bisa digunakan kembali.
 
 RunIt.
-Dari blueprint sampai eksekusi tanpa chaos.
+Dari master plan sampai eksekusi tanpa chaos.
 AI Operational Intelligence untuk event execution.
 
 Coba sekarang di runit.app.

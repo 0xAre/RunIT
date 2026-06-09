@@ -70,15 +70,15 @@ yang khusus menangani operational chaos dalam event execution."
   - **Budget:** *IDR 150.000.000*
   - **Date:** *15–16 Agustus 2026*
   - **Venue:** *Jakarta Convention Center*
-- Cursor klik tombol **"Generate AI Blueprint"**
+- Cursor klik tombol **"Generate AI Master Plan"**
 
 ### VISUAL: 0:28 – 0:40
 
-**[Screen: AI Blueprint Generation]**
+**[Screen: AI Master Plan Generation]**
 
-- Loading spinner animasi — tampilan "Gemini AI sedang menyusun blueprint..."
+- Loading spinner animasi — tampilan "Gemini AI sedang menyusun master plan..."
 - Progress indicator: *"Analyzing event type..."* → *"Structuring divisions..."* → *"Mapping dependencies..."* → *"Calculating timeline..."* → *"Identifying risks..."*
-- Blueprint muncul dengan animasi reveal — konten bertahap:
+- Master Plan muncul dengan animasi reveal — konten bertahap:
   1. **9 Divisi Otomatis:** Acara, Materi, Publikasi, Perlengkapan, Konsumsi, Sponsor, Keamanan, Kesehatan, Kesekretariatan
   2. **Critical Path Tasks** — ditandai merah
   3. **Timeline** dari H-30 sampai H+1
@@ -86,9 +86,9 @@ yang khusus menangani operational chaos dalam event execution."
 
 ### VISUAL: 0:40 – 0:55
 
-**[Screen: Blueprint Detail View]**
+**[Screen: Master Plan Detail View]**
 
-- Scroll perlahan melalui blueprint `app/workspace/[id]/blueprint/page.tsx`
+- Scroll perlahan melalui master plan `app/workspace/[id]/master-plan/page.tsx`
 - Highlight dengan zoom pada:
   - Risk assessment section
   - Dependency mapping
@@ -125,7 +125,7 @@ Fleksibel penuh — karena kami tahu event itu dinamis."
 **[Screen: Task List View]**
 
 - Buka halaman `app/workspace/[id]/tasks/page.tsx`
-- Tampilkan task list yang sudah terisi dari blueprint
+- Tampilkan task list yang sudah terisi dari master plan
 - Scroll ke salah satu task: *"Cari dan booking venue alternatif"*
 - Klik task → modal `AiTaskAssistModal` muncul
 - Tampilkan AI agent yang bekerja:
@@ -359,7 +359,7 @@ Krisis tertangani dalam hitungan detik."
 
   | Icon | Feature |
   |------|---------|
-  | 🧠 | AI Blueprint Generator |
+  | 🧠 | AI Master Plan Generator |
   | 🤖 | 12+ Specialized AI Task Agents |
   | 🔗 | DAG Execution Engine |
   | 🎯 | Live Mission Control Room |
@@ -389,7 +389,7 @@ seluruh operational intelligence
 tersimpan dan bisa digunakan kembali.
 
 RunIt.
-Dari blueprint sampai eksekusi tanpa chaos.
+Dari master plan sampai eksekusi tanpa chaos.
 AI Operational Intelligence untuk event execution.
 
 Coba sekarang di runit.app.
@@ -411,7 +411,7 @@ Let's turn event chaos into operational clarity."
 | **Dev Server** | `npm run dev` dijalankan, pastikan hot reload lancar |
 | **Firebase** | Firebase emulator atau production project aktif, autentikasi Google berfungsi |
 | **API Keys** | Gemini API + You.com API keys aktif dan memiliki kuota cukup |
-| **Akun Demo** | Siapkan akun yang sudah login dan memiliki event *"Tech Innovation Summit 2026"* dengan data sample lengkap (blueprint, tasks, dependencies, committee) |
+| **Akun Demo** | Siapkan akun yang sudah login dan memiliki event *"Tech Innovation Summit 2026"* dengan data sample lengkap (master plan, tasks, dependencies, committee) |
 | **Browser** | Chrome/Edge terbaru, incognito mode untuk menghindari ekstensi mengganggu |
 
 ### Hardware & Software Rekaman
@@ -483,16 +483,16 @@ Scenes:
 | B1-3 | Cut ke halaman landing RunIT (Alt+Tab) — 10 detik |
 | B1-4 | Stop recording |
 
-#### Segmen 2 — AI Blueprint (0:20 – 0:55)
+#### Segmen 2 — AI Master Plan (0:20 – 0:55)
 
 | Step | Action |
 |------|--------|
 | B2-1 | Mulai OBS recording |
 | B2-2 | Di landing page, klik **"Create New Event"** |
 | B2-3 | Isi form wizard (data sudah pre-typed di notepad, copy-paste untuk kecepatan) |
-| B2-4 | Klik **"Generate AI Blueprint"** |
+| B2-4 | Klik **"Generate AI Master Plan"** |
 | B2-5 | Tunggu loading (3-5 detik) — pastikan animasi loading terlihat |
-| B2-6 | Scroll blueprint yang muncul, tunjuk critical path, budget |
+| B2-6 | Scroll master plan yang muncul, tunjuk critical path, budget |
 | B2-7 | Demo edit task (klik edit icon, ketik sesuatu, save) |
 | B2-8 | Stop recording |
 
@@ -614,7 +614,7 @@ Layer 6 (Text):   Overlay teks penjelasan
 | Timeline | Action |
 |----------|--------|
 | **Segmen 1** | Potong loading/pause yang tidak perlu. Tambahkan B-roll di atas screen recording untuk 10 detik pertama. Teks overlay statistik dengan animasi typewriter. |
-| **Segmen 2** | Fast-forward bagian typing form wizard (speed 2x) atau potong dan gunakan pre-filled form. Fokuskan pada hasil blueprint. Zoom in 110% pada bagian budget chart. |
+| **Segmen 2** | Fast-forward bagian typing form wizard (speed 2x) atau potong dan gunakan pre-filled form. Fokuskan pada hasil master plan. Zoom in 110% pada bagian budget chart. |
 | **Segmen 3** | Potong bagian loading AI yang terlalu lama (maks 3 detik). Teks overlay nama agent saat hover. |
 | **Segmen 4** | Zoom in pada critical path. Tambahkan highlight border merah tipis di sekitar node terdampak. |
 | **Segmen 5** | Text overlay untuk voice AI interaksi (simulasi percakapan). Tampilkan sebagai "chat bubble" style. |
@@ -680,7 +680,7 @@ Jika waktu terbatas, gunakan metode one-take:
 
 | Step | Action |
 |------|--------|
-| 1 | Buka semua tab browser yang diperlukan: landing page, workspace, blueprint, tasks, dependencies, simulate, live, incident, report |
+| 1 | Buka semua tab browser yang diperlukan: landing page, workspace, master-plan, tasks, dependencies, simulate, live, incident, report |
 | 2 | Mulai OBS recording |
 | 3 | Jalankan demo sesuai skrip — jika salah, pause 2 detik, ulangi bagian itu, lanjutkan (potong saat editing) |
 | 4 | Selesai — stop recording |

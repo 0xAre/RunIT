@@ -129,7 +129,7 @@ NOT:
 
 RunIt membantu tim:
 1. merancang event
-2. membangun execution blueprint
+2. membangun execution masterPlan
 3. memecah operational complexity
 4. menyusun dependency flow
 5. mempersiapkan contingency plans
@@ -198,7 +198,7 @@ RunIt masuk ke:
 
 # EXECUTION MODE
 
-AI mengubah blueprint menjadi:
+AI mengubah master plan menjadi:
 - operational system
 - actionable workflows
 - execution dependencies
@@ -406,7 +406,7 @@ Users can input:
 
 ---
 
-## 2. AI Event Blueprint Generator
+## 2. AI Event Master Plan Generator
 Generate:
 - timelines
 - divisions
@@ -593,7 +593,7 @@ Reason:
 # AI Responsibilities
 
 Gemini digunakan untuk:
-- event blueprint generation
+- event master plan generation
 - operational decomposition
 - risk analysis
 - simulation generation
@@ -621,7 +621,7 @@ src/
  ├── components/
  ├── features/
  │    ├── event-initiation/
- │    ├── blueprint-engine/
+ │    ├── master-plan-engine/
  │    ├── simulation-engine/
  │    ├── dependency-mapper/
  │    ├── execution-mode/
@@ -644,7 +644,7 @@ src/
 ### 1. Event Input Workspace
 User creates event.
 
-### 2. AI Blueprint Generation
+### 2. AI Master Plan Generation
 Generate operational structure.
 
 ### 3. Dynamic Revision Loop
@@ -682,7 +682,7 @@ Example:
 > "National AI seminar for 500 students."
 
 AI:
-- generates blueprint
+- generates masterPlan
 - creates divisions
 - builds timelines
 - identifies dependencies

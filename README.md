@@ -4,7 +4,7 @@
 
 **From one brief to full event execution — AI runs the ops, you run the show.**
 
-*Brief → Blueprint → Simulate → Live Control Room → Report.*
+*Brief → Master Plan → Simulate → Live Control Room → Report.*
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Gemini](https://img.shields.io/badge/Gemini-API-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
@@ -23,7 +23,7 @@ Event operators don't fail on ideas — they fail on **execution chaos**: scatte
 
 **RunIT** is an **AI-native event execution system**. Drop a brief, get a dependency-mapped master plan, auto-resolve tasks with specialized agents, stress-test disasters before they happen, then command the whole operation from a live mission-control dashboard.
 
-> Satu brief masuk. Blueprint, vendor draft, simulasi krisis, dan laporan keluar — tanpa spreadsheet 47 tab.
+> Satu brief masuk. Master plan, vendor draft, simulasi krisis, dan laporan keluar — tanpa spreadsheet 47 tab.
 
 ---
 
@@ -32,7 +32,7 @@ Event operators don't fail on ideas — they fail on **execution chaos**: scatte
 | Stage | What you get |
 |-------|----------------|
 | **AI Panitia** | Source committee members & roles from your event context |
-| **Brief → Blueprint** | Parse natural-language briefs into tasks, timelines & DAG |
+| **Brief → Master Plan** | Parse natural-language briefs into tasks, timelines & DAG |
 | **Task Resolution** | 9 specialized agents resolve venue, vendor, sponsor, permit & more |
 | **Auto-Resolve Pipeline** | Batch-resolve up to 50 tasks with confidence scores & draft comms |
 | **Simulation** | AI-generated disruption scenarios + contingency plans |
@@ -75,7 +75,7 @@ Powered by **`lib/task-agents.ts`** + **`lib/gemini.ts`** with optional **`YOU_A
 ```mermaid
 flowchart LR
   A[Landing / Auth] --> B[Workspace]
-  B --> C[Brief & Blueprint]
+  B --> C[Brief & Master Plan]
   C --> D[Task DAG]
   D --> E[AI Resolve Pipeline]
   E --> F[Simulation]
@@ -142,7 +142,7 @@ GOOGLE_MAPS_API_KEY=
 
 | Variable | Purpose |
 |----------|---------|
-| `GEMINI_API_KEY` | Blueprint, agents, simulation, reports, copilot |
+| `GEMINI_API_KEY` | Master plan, agents, simulation, reports, copilot |
 | `NEXT_PUBLIC_FIREBASE_*` | Auth, Firestore sync, storage |
 | `YOU_API_KEY` | Live web sourcing for venue/vendor/sponsor tasks |
 | `GOOGLE_MAPS_API_KEY` | Geocode, places autocomplete, venue picker |
@@ -167,13 +167,13 @@ app/
   api/ai/          # Gemini-powered endpoints (resolve, simulate, report, …)
   api/search/      # Maps, geocode, places, draft search
   api/dag/         # Dependency graph propagation
-  workspace/       # Event ops UI (tasks, live, execution, research, …)
+  workspace/         # Event ops UI (tasks, live, execution, master-plan, …)
   auth/            # Sign in / sign up
 components/        # Shared UI + landing sections
 hooks/             # Auth & client hooks
 lib/               # gemini, task-agents, you, dag-engine, firebase, i18n
 store/             # Zustand stores (events, language)
-docs/              # Blueprint, changelog, pitch script
+docs/              # Product docs (master plan vision, changelog, pitch script)
 scripts/           # Local tooling (simulation, voiceover, tests)
 public/            # Static assets & brand
 ```
@@ -197,7 +197,7 @@ Hosting site: **`runit`** · region **`asia-southeast2`** (see `firebase.json`).
 
 | Doc | Description |
 |-----|-------------|
-| [Product Blueprint](docs/runit_ai_event_execution_system_blueprint.md) | Full system design & vision |
+| [Product vision doc](docs/runit_ai_event_execution_system_master_plan.md) | Full system design & master plan architecture |
 | [V2 Changelog](docs/RUNIT_V2_CHANGELOG.md) | Milestone-by-milestone implementation notes |
 | [Pitch Script](docs/PITCHING_SCRIPT.md) | Demo & video narrative |
 
