@@ -115,7 +115,7 @@ export default function ResearchPage() {
     setSponsorError(null);
     setSponsorResult(null);
 
-    const eventBlueprint = currentEvent
+    const eventMasterPlan = currentEvent
       ? `Event "${currentEvent.name}" (${currentEvent.type}), target audiens: ${currentEvent.audience}, skala: ${currentEvent.scale}, ${currentEvent.participants} peserta, tujuan: ${currentEvent.goals}`
       : undefined;
 
@@ -123,7 +123,7 @@ export default function ResearchPage() {
       const res = await fetch('/api/ai/sponsor-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: validUrls, eventBlueprint, lang }),
+        body: JSON.stringify({ urls: validUrls, eventMasterPlan, lang }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Profiling gagal');

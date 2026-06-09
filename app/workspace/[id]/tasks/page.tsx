@@ -200,7 +200,7 @@ export default function TasksBoardPage() {
                           }}
                         >
                           {tasks.map((task, index) => {
-                            const division = currentEvent.blueprint?.divisions.find(d => d.id === task.divisionId);
+                            const division = currentEvent.masterPlan?.divisions.find(d => d.id === task.divisionId);
                             const divColor = division?.color || 'var(--color-border)';
                             const isActionLoading = loadingTaskId === task.id;
 

@@ -26,7 +26,7 @@ import { useRouter } from 'next/navigation';
 /* ── Data ─────────────────────────────────────────────────────── */
 
 const STAGES = [
-  'AI Panitia', 'Brief', 'Draft Pesan', 'Blueprint',
+  'AI Panitia', 'Brief', 'Draft Pesan', 'Master Plan',
   'Simulate', 'Live', 'Report',
 ];
 
@@ -77,7 +77,7 @@ export default function HomePage() {
   const features = [
     {
       icon: Zap,
-      tag: 'Blueprint',
+      tag: 'Master Plan',
       title: t.feat1Title,
       desc: t.feat1Desc,
       gradient: STAGE_GRADIENTS[0],
@@ -279,7 +279,7 @@ export default function HomePage() {
             <span className="landing-section-eyebrow">// operational capabilities</span>
             <h2 className="landing-section-title">Everything you need<br />to run it.</h2>
             <p className="landing-section-subtitle">
-              A complete toolkit for modern event operators — from blueprint to real-time incident response.
+              A complete toolkit for modern event operators — from master plan to real-time incident response.
             </p>
           </motion.div>
 

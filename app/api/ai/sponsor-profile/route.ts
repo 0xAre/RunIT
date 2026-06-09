@@ -8,7 +8,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { urls, eventBlueprint, lang = "id" } = body;
+    const { urls, eventMasterPlan, lang = "id" } = body;
 
     if (!urls || !Array.isArray(urls) || urls.length === 0) {
       return NextResponse.json(
@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
 Kamu adalah AI Sponsorship Strategist milik RunIT — sistem perencanaan event.
 ${langInstruction}
 
-Berikut adalah detail event (blueprint singkat):
-${eventBlueprint ?? "Seminar/festival dengan target audiens muda."}
+Berikut adalah detail event (masterPlan singkat):
+${eventMasterPlan ?? "Seminar/festival dengan target audiens muda."}
 
 Berikut adalah profil perusahaan calon sponsor yang diambil dari website mereka:
 ---

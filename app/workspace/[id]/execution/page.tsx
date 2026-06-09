@@ -863,18 +863,18 @@ export default function ExecutionPage() {
 
   // Update task status in store
   const updateTaskStatus = useCallback((divId: string, taskId: string, status: Task['status']) => {
-    if (!currentEvent?.blueprint) return;
+    if (!currentEvent?.masterPlan) return;
     // We update through local mutation reflected by Zustand
-    const blueprint = currentEvent.blueprint;
-    const div = blueprint.divisions.find(d => d.id === divId);
+    const masterPlan = currentEvent.masterPlan;
+    const div = masterPlan.divisions.find(d => d.id === divId);
     if (!div) return;
     const task = div.tasks.find(t => t.id === taskId);
     if (task) task.status = status;
-    // Trigger Zustand re-render by updating blueprint
-    useEventStore.getState().updateBlueprint({ ...blueprint });
+    // Trigger Zustand re-render by updating masterPlan
+    useEventStore.getState().updateMasterPlan({ ...masterPlan });
   }, [currentEvent]);
 
-  const divisions = currentEvent?.blueprint?.divisions || [];
+  const divisions = currentEvent?.masterPlan?.divisions || [];
   const allTasks = divisions.flatMap(d => d.tasks);
   const doneTasks = allTasks.filter(t => t.status === 'done').length;
   const completionPct = allTasks.length > 0 ? Math.round((doneTasks / allTasks.length) * 100) : 0;
@@ -1111,8 +1111,8 @@ export default function ExecutionPage() {
             </div>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>{currentEvent.name} · {currentEvent.type} · {allTasks.length} tasks</p>
           </div>
-          {!currentEvent.blueprint && (
-            <button onClick={() => router.push(`/workspace/${params.id}/blueprint`)}
+          {!currentEvent.masterPlan && (
+            <button onClick={() => router.push(`/workspace/${params.id}/master-plan`)}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
               <Zap size={13} /> Generate Master Plan Dulu
             </button>
@@ -1317,7 +1317,7 @@ export default function ExecutionPage() {
             )}
             {activeTab === 'progress' && (
               <motion.div key="progress" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <ProgressTab divisions={divisions} timeline={currentEvent.timeline} risks={currentEvent.blueprint?.risks} />
+                <ProgressTab divisions={divisions} timeline={currentEvent.timeline} risks={currentEvent.masterPlan?.risks} />
               </motion.div>
             )}
           </AnimatePresence>

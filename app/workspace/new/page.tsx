@@ -382,11 +382,11 @@ export default function NewEventPage() {
       picContacts: [],
       externalContacts: [],
     });
-    // Pass marketContext to blueprint via sessionStorage so workspace/blueprint page can read it
+    // Pass marketContext to master plan via sessionStorage so workspace/master-plan page can read it
     if (marketContextRef.current) {
       sessionStorage.setItem(`market-context-${eventId}`, marketContextRef.current);
     }
-    router.push(`/workspace/${eventId}/blueprint`);
+    router.push(`/workspace/${eventId}/master-plan`);
   };
 
   const handleSubmit = () => {
@@ -401,11 +401,11 @@ export default function NewEventPage() {
       picContacts,
       externalContacts,
     });
-    // Pass marketContext to blueprint via sessionStorage so workspace/blueprint page can read it
+    // Pass marketContext to master plan via sessionStorage so workspace/master-plan page can read it
     if (marketContextRef.current) {
       sessionStorage.setItem(`market-context-${eventId}`, marketContextRef.current);
     }
-    router.push(`/workspace/${eventId}/blueprint`);
+    router.push(`/workspace/${eventId}/master-plan`);
   };
 
   const scaleOptions = [
@@ -453,7 +453,7 @@ export default function NewEventPage() {
                     Quick-Start — Pilih Template
                   </span>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: '0.25rem' }}>
-                    Blueprint siap &lt; 60 detik
+                    Master Plan siap &lt; 60 detik
                   </span>
                 </div>
 
@@ -587,7 +587,7 @@ export default function NewEventPage() {
                         }}
                       >
                         <Zap size={15} style={{ fill: quickName.trim() ? 'rgba(0,0,0,0.3)' : 'none' }} />
-                        ⚡ Launch Blueprint Sekarang
+                        ⚡ Launch Master Plan Sekarang
                       </button>
                     </div>
                   </motion.div>
@@ -693,7 +693,7 @@ export default function NewEventPage() {
                         {/* No insights fallback */}
                         {!briefLoading && marketBrief && !marketBrief.insights && (
                           <p style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                            Data pasar ditemukan. Blueprint akan menggunakan konteks ini.
+                            Data pasar ditemukan. Master Plan akan menggunakan konteks ini.
                           </p>
                         )}
                       </div>

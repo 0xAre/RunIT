@@ -102,7 +102,7 @@ const PRIORITY_DURATION: Record<DagTask['priority'], number> = {
 };
 
 /**
- * Enrich raw tasks from the blueprint with DAG fields.
+ * Enrich raw tasks from the master plan with DAG fields.
  * Called once when entering Execution Mode.
  */
 export function enrichTasks(rawTasks: Omit<DagTask, 'duration' | 'slack' | 'isCritical' | 'earliestStart' | 'earliestFinish' | 'latestStart' | 'latestFinish' | 'delayMinutes' | 'assigneeSilentMinutes'>[]): DagTask[] {

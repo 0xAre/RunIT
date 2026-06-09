@@ -265,7 +265,7 @@ export default function ControlRoomPage() {
   } = useEventStore();
 
   const execution = currentEvent?.execution;
-  const blueprint = currentEvent?.blueprint;
+  const masterPlan = currentEvent?.masterPlan;
 
   const [showCrisisModal, setShowCrisisModal] = useState(false);
   const [selectedCrisis, setSelectedCrisis] = useState(CRISIS_TEMPLATES[0]);
@@ -317,18 +317,18 @@ export default function ControlRoomPage() {
     reader.readAsDataURL(file);
   };
 
-  // ── Initialize execution state from blueprint ─────────────────────────────
+  // ── Initialize execution state from masterPlan ─────────────────────────────
   useEffect(() => {
-    if (!blueprint || execution?.isLive) return;
+    if (!masterPlan || execution?.isLive) return;
 
-    const rawTasks = blueprint.divisions.flatMap(div =>
+    const rawTasks = masterPlan.divisions.flatMap(div =>
       div.tasks.map(t => ({ ...t, divisionName: div.name }))
     );
 
     const enriched = enrichTasks(rawTasks);
     const withCriticalPath = computeCriticalPath(enriched);
 
-    const divMeta = blueprint.divisions.map(d => ({
+    const divMeta = masterPlan.divisions.map(d => ({
       id: d.id, name: d.name, color: d.color, personnel: d.personnel ?? 3,
     }));
     const divLoads = calculateDivisionLoad(withCriticalPath, divMeta);
@@ -340,7 +340,7 @@ export default function ControlRoomPage() {
       ocs,
       withCriticalPath.filter(t => t.isCritical).map(t => t.id)
     );
-  }, [blueprint, execution?.isLive]);
+  }, [masterPlan, execution?.isLive]);
 
   // ── Keep OCS current when tasks change ───────────────────────────────────
   useEffect(() => {
@@ -462,14 +462,14 @@ export default function ControlRoomPage() {
 
   // ── Build React Flow graph ────────────────────────────────────────────────
   const { rfNodes, rfEdges } = useMemo(() => {
-    if (!execution?.dagTasks || !blueprint) return { rfNodes: [], rfEdges: [] };
+    if (!execution?.dagTasks || !masterPlan) return { rfNodes: [], rfEdges: [] };
 
     const tasks = execution.dagTasks;
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
     // Lay out tasks by division, left-to-right
-    blueprint.divisions.forEach((div, divIdx) => {
+    masterPlan.divisions.forEach((div, divIdx) => {
       const divTasks = tasks.filter(t => t.divisionId === div.id);
       const colX = divIdx * 220;
 
@@ -511,11 +511,11 @@ export default function ControlRoomPage() {
     });
 
     return { rfNodes: nodes, rfEdges: edges };
-  }, [execution?.dagTasks, blueprint, handleTaskStatusChange]);
+  }, [execution?.dagTasks, masterPlan, handleTaskStatusChange]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  if (!blueprint) {
+  if (!masterPlan) {
     return (
       <div style={{
         height: '100%', display: 'flex', flexDirection: 'column',

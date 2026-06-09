@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEventStore, type Blueprint } from '@/store/eventStore';
+import { useEventStore, type MasterPlan } from '@/store/eventStore';
 import { classifyAllTasks, CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/task-agents';
 import {
   Brain, Zap, Users, Calendar, DollarSign, AlertTriangle,
@@ -29,7 +29,7 @@ const severityColors = {
 };
 
 /* ── Loading State ────────────────────────────────────────────── */
-function LoadingBlueprint() {
+function LoadingMasterPlan() {
   const steps = [
     'Fetching real-time market intelligence...',
     'Analyzing event parameters...',
@@ -90,16 +90,16 @@ function PanelHeader({ title, icon: Icon }: { title: string; icon?: any }) {
 }
 
 /* ── Compact View for Small Events ───────────────────────────── */
-function BlueprintCompactView({
-  blueprint, onExpress, onFull, router, params
+function MasterPlanCompactView({
+  masterPlan, onExpress, onFull, router, params
 }: {
-  blueprint: Blueprint;
+  masterPlan: MasterPlan;
   onExpress: () => void;
   onFull: () => void;
   router: any;
   params: any;
 }) {
-  const totalTasks = blueprint.divisions.reduce((a, d) => a + d.tasks.length, 0);
+  const totalTasks = masterPlan.divisions.reduce((a, d) => a + d.tasks.length, 0);
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-5 max-w-[760px] mx-auto pb-12 px-4 md:px-0">
       {/* Header */}
@@ -107,13 +107,13 @@ function BlueprintCompactView({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.375rem' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
-              {blueprint.eventName}
+              {masterPlan.eventName}
             </h1>
             <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: 12, background: 'rgba(37,208,171,0.1)', border: '1px solid rgba(37,208,171,0.3)', color: 'var(--color-mint)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Compact Mode
             </span>
           </div>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', maxWidth: 540, lineHeight: 1.55 }}>{blueprint.summary}</p>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', maxWidth: 540, lineHeight: 1.55 }}>{masterPlan.summary}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
           <button className="btn-ghost" onClick={onFull} style={{ fontSize: '0.78rem' }}>Full View</button>
@@ -132,7 +132,7 @@ function BlueprintCompactView({
           <Zap size={18} color="#f59e0b" style={{ flexShrink: 0 }} />
           <div>
             <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>Express Mode Tersedia</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0.1rem 0 0' }}>{totalTasks} tasks di {blueprint.divisions.length} divisi · Langsung masuk ke execution</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0.1rem 0 0' }}>{totalTasks} tasks di {masterPlan.divisions.length} divisi · Langsung masuk ke execution</p>
           </div>
         </div>
         <button
@@ -151,7 +151,7 @@ function BlueprintCompactView({
           <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{totalTasks} tasks total</span>
         </div>
         <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {blueprint.divisions.map(div => (
+          {masterPlan.divisions.map(div => (
             <div key={div.id}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.625rem' }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: div.color || 'var(--color-mint)', flexShrink: 0 }} />
@@ -179,14 +179,14 @@ function BlueprintCompactView({
       </div>
 
       {/* Risks quick view */}
-      {blueprint.risks.length > 0 && (
+      {masterPlan.risks.length > 0 && (
         <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <AlertTriangle size={15} color="var(--color-amber)" />
             <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Risiko Utama</span>
           </div>
           <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {blueprint.risks.map(r => (
+            {masterPlan.risks.map(r => (
               <div key={r.id} style={{ display: 'flex', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'var(--color-ground-0)', borderRadius: 6 }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: r.severity === 'critical' ? 'var(--color-red)' : r.severity === 'high' ? 'var(--color-amber)' : 'var(--color-teal)', textTransform: 'uppercase', whiteSpace: 'nowrap', marginTop: 1 }}>{r.severity}</span>
                 <div style={{ flex: 1 }}>
@@ -203,10 +203,10 @@ function BlueprintCompactView({
 }
 
 /* ── Main Page ────────────────────────────────────────────────── */
-export default function BlueprintPage() {
+export default function MasterPlanPage() {
   const params = useParams();
   const router = useRouter();
-  const { currentEvent, updateBlueprint, updateEventStage, updateEventDataLanguage, setAiLoading, isAiLoading, setAiError, aiError, addDagTask, classifyAllTasks: storeClassify } = useEventStore();
+  const { currentEvent, updateMasterPlan, updateEventStage, updateEventDataLanguage, setAiLoading, isAiLoading, setAiError, aiError, addDagTask, classifyAllTasks: storeClassify } = useEventStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'divisions' | 'timeline' | 'risks'>('overview');
   const [forceFullView, setForceFullView] = useState(false);
   
@@ -215,17 +215,17 @@ export default function BlueprintPage() {
   const [classifiedCount, setClassifiedCount] = useState(0);
   const [classifying, setClassifying] = useState(false);
 
-  const blueprint = currentEvent?.blueprint;
+  const masterPlan = currentEvent?.masterPlan;
   const isSmallEvent = !forceFullView && (
     currentEvent?.scale === 'small' ||
     (currentEvent?.teamSize != null && currentEvent.teamSize <= 5)
   );
 
-  const autoClassifyTasks = useCallback(async (bp?: Blueprint) => {
-    const blueprint = bp || currentEvent?.blueprint;
-    if (!blueprint || !currentEvent) return;
+  const autoClassifyTasks = useCallback(async (bp?: MasterPlan) => {
+    const masterPlan = bp || currentEvent?.masterPlan;
+    if (!masterPlan || !currentEvent) return;
 
-    const allTasks = blueprint.divisions.flatMap(d => d.tasks.map(t => ({ id: t.id, title: t.title, description: t.description })));
+    const allTasks = masterPlan.divisions.flatMap(d => d.tasks.map(t => ({ id: t.id, title: t.title, description: t.description })));
     if (allTasks.length === 0) return;
 
     setClassifying(true);
@@ -240,7 +240,7 @@ export default function BlueprintPage() {
     }
   }, [currentEvent, storeClassify]);
 
-  const generateBlueprint = async () => {
+  const generateMasterPlan = async () => {
     if (!currentEvent) return;
     setAiLoading(true);
     setAiError(null);
@@ -254,25 +254,25 @@ export default function BlueprintPage() {
         sessionStorage.removeItem(marketContextKey);
       }
 
-      const res = await fetch('/api/ai/blueprint', {
+      const res = await fetch('/api/ai/master-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...currentEvent, lang, marketContext }),
       });
       
       if (!res.ok) throw new Error('API call failed');
-      const { blueprint } = await res.json();
+      const { masterPlan } = await res.json();
       
-      if (blueprint) {
-        updateBlueprint(blueprint);
+      if (masterPlan) {
+        updateMasterPlan(masterPlan);
         updateEventDataLanguage(lang);
-        updateEventStage('blueprint');
-        autoClassifyTasks(blueprint);
+        updateEventStage('masterplan');
+        autoClassifyTasks(masterPlan);
       }
     } catch (err) {
-      setAiError('Failed to generate blueprint. Showing demo blueprint.');
-      // Demo mock blueprint
-      const mockBlueprint: Blueprint = {
+      setAiError('Failed to generate master plan. Showing demo master plan.');
+      // Demo mock masterPlan
+      const mockMasterPlan: MasterPlan = {
         eventName: currentEvent.name,
         eventType: currentEvent.type,
         summary: `${currentEvent.name} is a ${currentEvent.scale} scale ${currentEvent.type} designed for ${currentEvent.audience}. Target: ${currentEvent.participants} participants. Cross-division coordination required.`,
@@ -305,29 +305,29 @@ export default function BlueprintPage() {
           { id: 'r2', scenario: 'Power failure', severity: 'critical', probability: 'low', mitigation: 'Genset testing on H-1' },
         ],
       };
-      updateBlueprint(mockBlueprint);
+      updateMasterPlan(mockMasterPlan);
       updateEventDataLanguage(lang);
-      updateEventStage('blueprint');
+      updateEventStage('masterplan');
     } finally {
       setAiLoading(false);
     }
   };
 
   useEffect(() => {
-    if (currentEvent && !currentEvent.blueprint && !isAiLoading) {
-      generateBlueprint();
+    if (currentEvent && !currentEvent.masterPlan && !isAiLoading) {
+      generateMasterPlan();
     }
-    if (blueprint && !editableSummary) {
-      setEditableSummary(blueprint.summary);
+    if (masterPlan && !editableSummary) {
+      setEditableSummary(masterPlan.summary);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEvent?.id, blueprint?.summary]);
+  }, [currentEvent?.id, masterPlan?.summary]);
 
 
   // ── Express Mode: generate (if needed) then go to execution ──
   const handleExpressMode = async () => {
-    if (!blueprint) {
-      await generateBlueprint(); // properly await AI generation
+    if (!masterPlan) {
+      await generateMasterPlan(); // properly await AI generation
     }
     // Small delay to let store update propagate
     await new Promise(r => setTimeout(r, 200));
@@ -348,9 +348,9 @@ export default function BlueprintPage() {
     );
   }
 
-  if (isAiLoading) return <LoadingBlueprint />;
+  if (isAiLoading) return <LoadingMasterPlan />;
 
-  if (!blueprint) {
+  if (!masterPlan) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: '1rem' }}>
         {aiError && (
@@ -359,9 +359,9 @@ export default function BlueprintPage() {
           </div>
         )}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn-primary" onClick={generateBlueprint}>
+          <button className="btn-primary" onClick={generateMasterPlan}>
             <Brain size={16} style={{ marginRight: '0.5rem' }} />
-            Generate Blueprint
+            Generate Master Plan
           </button>
           {isSmallEvent && (
             <button
@@ -379,8 +379,8 @@ export default function BlueprintPage() {
   // ── Compact View for small events ─────────────────────────────
   if (isSmallEvent) {
     return (
-      <BlueprintCompactView
-        blueprint={blueprint}
+      <MasterPlanCompactView
+        masterPlan={masterPlan}
         onExpress={handleExpressMode}
         onFull={() => setForceFullView(true)}
         router={router}
@@ -397,10 +397,10 @@ export default function BlueprintPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
-              {blueprint.eventName}
+              {masterPlan.eventName}
             </h1>
             <span className="badge" style={{ background: 'var(--color-ground-2)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>
-              {blueprint.eventType}
+              {masterPlan.eventType}
             </span>
           </div>
           
@@ -416,7 +416,7 @@ export default function BlueprintPage() {
             />
           ) : (
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', maxWidth: '750px', lineHeight: 1.6 }}>
-              {blueprint.summary}
+              {masterPlan.summary}
             </p>
           )}
         </div>
@@ -424,7 +424,7 @@ export default function BlueprintPage() {
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {isEditingMode ? (
             <button className="btn-primary" onClick={() => {
-              updateBlueprint({ ...blueprint, summary: editableSummary });
+              updateMasterPlan({ ...masterPlan, summary: editableSummary });
               setIsEditingMode(false);
             }} style={{ fontSize: '0.85rem' }}>
               <Save size={14} /> Save Edits
@@ -435,7 +435,7 @@ export default function BlueprintPage() {
             </button>
           )}
           
-          <button className="btn-ghost" onClick={generateBlueprint} style={{ fontSize: '0.85rem' }}>
+          <button className="btn-ghost" onClick={generateMasterPlan} style={{ fontSize: '0.85rem' }}>
             <RefreshCw size={14} /> Regenerate
           </button>
           <button
@@ -508,7 +508,7 @@ export default function BlueprintPage() {
               Master Plan Ready for Execution
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-              {blueprint.divisions.reduce((acc, d) => acc + d.tasks.length, 0)} tasks across {blueprint.divisions.length} divisions · DAG engine initializes on Control Room launch
+              {masterPlan.divisions.reduce((acc, d) => acc + d.tasks.length, 0)} tasks across {masterPlan.divisions.length} divisions · DAG engine initializes on Control Room launch
             </p>
           </div>
         </div>
@@ -606,7 +606,7 @@ export default function BlueprintPage() {
               <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px' }}>
                 <PanelHeader title="Operational Phases" icon={CheckCircle} />
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {blueprint.operationalPhases.map((phase, i) => (
+                  {masterPlan.operationalPhases.map((phase, i) => (
                     <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                       <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--color-ground-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem', fontWeight: 600 }}>{i+1}</span>
@@ -620,7 +620,7 @@ export default function BlueprintPage() {
               <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px' }}>
                 <PanelHeader title="Budget Allocation" icon={DollarSign} />
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  {blueprint.budgetAllocation.map((item, i) => (
+                  {masterPlan.budgetAllocation.map((item, i) => (
                     <div key={i}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
                         <span style={{ color: 'var(--color-text-secondary)' }}>{item.category}</span>
@@ -637,7 +637,7 @@ export default function BlueprintPage() {
               <div style={{ gridColumn: '1 / -1', background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px' }}>
                 <PanelHeader title="Critical Path" icon={ArrowRight} />
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                  {blueprint.criticalPath.map((path, i) => (
+                  {masterPlan.criticalPath.map((path, i) => (
                     <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-mint)' }} />
                       <p style={{ fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>{path}</p>
@@ -652,7 +652,7 @@ export default function BlueprintPage() {
           {/* DIVISIONS */}
           {activeTab === 'divisions' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {blueprint.divisions.map(div => (
+              {masterPlan.divisions.map(div => (
                 <div key={div.id} style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden' }}>
                   <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -732,8 +732,8 @@ export default function BlueprintPage() {
               <div style={{ padding: '2.5rem 2rem' }}>
                 <div style={{ position: 'relative', paddingLeft: '2rem' }}>
                   <div style={{ position: 'absolute', left: '0.5rem', top: 0, bottom: 0, width: '1px', background: 'var(--color-border)' }} />
-                  {blueprint.timeline.map((item, i) => (
-                    <div key={i} style={{ position: 'relative', paddingBottom: i === blueprint.timeline.length - 1 ? 0 : '2.5rem' }}>
+                  {masterPlan.timeline.map((item, i) => (
+                    <div key={i} style={{ position: 'relative', paddingBottom: i === masterPlan.timeline.length - 1 ? 0 : '2.5rem' }}>
                       <div style={{
                         position: 'absolute', left: '-1.75rem', top: '0.25rem',
                         width: '10px', height: '10px', borderRadius: '50%',
@@ -769,7 +769,7 @@ export default function BlueprintPage() {
           {/* RISKS */}
           {activeTab === 'risks' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {blueprint.risks.map((risk) => {
+              {masterPlan.risks.map((risk) => {
                 const sc = severityColors[risk.severity];
                 return (
                   <div key={risk.id} style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden' }}>

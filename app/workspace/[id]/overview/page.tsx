@@ -50,10 +50,10 @@ export default function OverviewPage() {
       <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>{t.overviewNextAction}</p>
-          <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{t.sideBlueprint}</p>
+          <p style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{t.sideMasterPlan}</p>
         </div>
-        <Link href={`/workspace/${currentEvent.id}/blueprint`} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <Target size={14} /> {t.sideBlueprint} <ArrowRight size={14} />
+        <Link href={`/workspace/${currentEvent.id}/master-plan`} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+          <Target size={14} /> {t.sideMasterPlan} <ArrowRight size={14} />
         </Link>
       </div>
     </div>

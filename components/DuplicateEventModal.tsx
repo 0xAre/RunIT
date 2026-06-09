@@ -17,7 +17,7 @@ export default function DuplicateEventModal({ sourceEvent, onClose }: Props) {
 
   const [name, setName] = useState(`Copy of ${sourceEvent.name}`);
   const [timeline, setTimeline] = useState('');
-  const [copyBlueprint, setCopyBlueprint] = useState(true);
+  const [copyMasterPlan, setCopyMasterPlan] = useState(true);
   const [copyContacts, setCopyContacts] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,12 +28,12 @@ export default function DuplicateEventModal({ sourceEvent, onClose }: Props) {
     const newId = duplicateEvent(sourceEvent.id, {
       name: name.trim(),
       timeline: timeline.trim() || sourceEvent.timeline,
-      copyBlueprint,
+      copyMasterPlan,
       copyContacts,
     });
 
     if (newId) {
-      router.push(`/workspace/${newId}/blueprint`);
+      router.push(`/workspace/${newId}/master-plan`);
     } else {
       setIsLoading(false);
     }
@@ -139,16 +139,16 @@ export default function DuplicateEventModal({ sourceEvent, onClose }: Props) {
                 Opsi Duplikasi
               </p>
 
-              {/* Copy blueprint */}
+              {/* Copy master plan */}
               <button
-                onClick={() => setCopyBlueprint(v => !v)}
+                onClick={() => setCopyMasterPlan(v => !v)}
                 style={{
                   display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
                   background: 'none', border: 'none', cursor: 'pointer',
                   padding: 0, textAlign: 'left',
                 }}
               >
-                {copyBlueprint
+                {copyMasterPlan
                   ? <CheckSquare size={18} color="var(--accent-blue, #00ADB5)" style={{ flexShrink: 0, marginTop: 1 }} />
                   : <Square size={18} color="var(--text-muted)" style={{ flexShrink: 0, marginTop: 1 }} />
                 }

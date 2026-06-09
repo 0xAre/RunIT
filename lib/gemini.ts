@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { Blueprint, SimulationResult, EventData, TaskCategory, TaskSourcingResult, SourcingRecommendation } from '@/store/eventStore';
+import type { MasterPlan, SimulationResult, EventData, TaskCategory, TaskSourcingResult, SourcingRecommendation } from '@/store/eventStore';
 import { researchVenueOrVendor, deepResearch, sourceForTaskCategory } from './you';
 import { detectTaskCategory, getAgentConfig } from './task-agents';
 
@@ -33,18 +33,18 @@ export async function generateWithFallback(prompt: string, requireJson: boolean 
   }
 }
 
-export async function generateEventBlueprint(
+export async function generateEventMasterPlan(
   eventData: Partial<EventData>,
   lang: 'en' | 'id' = 'en',
   marketContext?: string
-): Promise<Blueprint> {
+): Promise<MasterPlan> {
   if (!process.env.GEMINI_API_KEY) {
-    console.log("No GEMINI_API_KEY found, returning mock blueprint.");
+    console.log("No GEMINI_API_KEY found, returning mock master plan.");
     if (lang === 'en') {
       return {
         eventName: eventData.name || "Mock Event",
         eventType: eventData.type || "Seminar",
-        summary: "This is a mock blueprint generated without AI to test the UI.",
+        summary: "This is a mock master plan generated without AI to test the UI.",
         operationalPhases: ["Planning", "Preparation", "Execution"],
         divisions: [
           {
@@ -213,7 +213,7 @@ Pastikan summary, budget allocation, dan risks mencerminkan insight dari data di
   }
 
   const prompt = `
-You are RunIt's AI operational intelligence engine. Generate a comprehensive event execution blueprint.
+You are RunIt's AI operational intelligence engine. Generate a comprehensive event execution master plan.
 ${langInstruction}
 
 Event Details:
@@ -233,7 +233,7 @@ ${webResearchContext}
 
 ${scaleInstructions}
 
-Generate a detailed operational blueprint as a valid JSON object with this EXACT structure:
+Generate a detailed operational master plan as a valid JSON object with this EXACT structure:
 {
   "eventName": "string",
   "eventType": "string",
@@ -306,7 +306,7 @@ Return ONLY the JSON object, no markdown, no explanation.
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
-    throw new Error('Failed to parse AI blueprint response');
+    throw new Error('Failed to parse AI master plan response');
   }
 }
 
@@ -540,12 +540,12 @@ Response should be 2-4 sentences. Be direct and practical.
   return await generateWithFallback(prompt);
 }
 
-export async function translateBlueprint(
-  blueprint: any,
+export async function translateMasterPlan(
+  masterPlan: any,
   targetLang: 'en' | 'id'
 ): Promise<any> {
   if (!process.env.GEMINI_API_KEY) {
-    return blueprint;
+    return masterPlan;
   }
   
   const langInstruction = targetLang === 'en' 
@@ -557,7 +557,7 @@ You are a highly accurate operational data translator.
 ${langInstruction}
 
 JSON DATA TO TRANSLATE:
-${JSON.stringify(blueprint, null, 2)}
+${JSON.stringify(masterPlan, null, 2)}
 
 Return ONLY the translated JSON object. Do not include any explanations or markdown.
 `;
@@ -569,8 +569,8 @@ Return ONLY the translated JSON object. Do not include any explanations or markd
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
     return JSON.parse(cleaned);
   } catch (error) {
-    console.error('Failed to translate blueprint', error);
-    return blueprint; // return original as fallback
+    console.error('Failed to translate master plan', error);
+    return masterPlan;
   }
 }
 

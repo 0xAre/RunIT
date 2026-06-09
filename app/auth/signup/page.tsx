@@ -292,13 +292,13 @@ export default function SignUpPage() {
                 fontFamily: 'var(--font-heading)', fontSize: 'var(--text-h3)',
                 marginBottom: 'var(--space-md)', lineHeight: 1.25,
               }}>
-                Build a reusable<br />execution blueprint.
+                Build a reusable<br />execution master plan.
               </h2>
               <p style={{
                 color: 'var(--color-text-secondary)', lineHeight: 1.7,
                 marginBottom: 'var(--space-2xl)', fontSize: 'var(--text-body)',
               }}>
-                Create events, generate AI blueprints, and run simulations
+                Create events, generate AI master plans, and run simulations
                 that keep your team aligned before live execution.
               </p>
 
@@ -315,7 +315,7 @@ export default function SignUpPage() {
               {/* Stage badges */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-xs)', marginTop: 'var(--space-lg)' }}>
                 {[
-                  ['Blueprint', 'blueprint'],
+                  ['Master Plan', 'master-plan'],
                   ['Dependencies', 'dependencies'],
                   ['Simulate', 'simulate'],
                   ['Live', 'live'],

@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-    const blueprint = eventData.blueprint;
-    const tasks = blueprint?.divisions?.flatMap((d: { tasks?: { title: string }[] }) => d.tasks || []) || [];
+    const masterPlan = eventData.masterPlan;
+    const tasks = masterPlan?.divisions?.flatMap((d: { tasks?: { title: string }[] }) => d.tasks || []) || [];
     const hasExecution = !!eventData.execution;
 
     // ── Role & Contact Context ────────────────────────────────────────────────────

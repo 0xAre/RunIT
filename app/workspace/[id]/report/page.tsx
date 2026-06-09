@@ -30,7 +30,7 @@ const MODULE_LABELS: Record<PostEventModule, { label: string; icon: typeof FileT
   'thank-you': { label: 'Pesan Terima Kasih', icon: Send, desc: 'Thank-you messages for sponsors, speakers, vendors, team' },
   reconciliation: { label: 'Rekonsiliasi Keuangan', icon: DollarSign, desc: 'Budget vs actual with variance analysis' },
   lessons: { label: 'Lessons Learned', icon: BookOpen, desc: 'What went well, what to improve, action items' },
-  template: { label: 'Event Template', icon: Save, desc: 'Reusable blueprint for next similar event' },
+  template: { label: 'Event Template', icon: Save, desc: 'Reusable master plan for next similar event' },
 };
 
 export default function ReportPage() {
@@ -120,8 +120,8 @@ export default function ReportPage() {
     return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Event tidak ditemukan.</div>;
   }
 
-  const completed = currentEvent.blueprint?.divisions.flatMap(d => d.tasks).filter(t => t.status === 'done').length || 0;
-  const total = currentEvent.blueprint?.divisions.flatMap(d => d.tasks).length || 0;
+  const completed = currentEvent.masterPlan?.divisions.flatMap(d => d.tasks).filter(t => t.status === 'done').length || 0;
+  const total = currentEvent.masterPlan?.divisions.flatMap(d => d.tasks).length || 0;
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>

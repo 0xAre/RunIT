@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { doc, setDoc, onSnapshot, collection, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
+import { normalizeEvent } from '@/lib/normalize-event';
 import type { DagTask, DivisionLoad, OCSResult, MitigationOption, PropagationResult } from '@/lib/dag-engine';
 
 export type { DagTask, DivisionLoad, OCSResult, MitigationOption };
@@ -20,7 +21,7 @@ function debouncedSave(get: () => { currentEvent: EventData | null }) {
 
 export type EventStage = 
   | 'initiation'
-  | 'blueprint'
+  | 'masterplan'
   | 'revision'
   | 'execution'
   | 'simulation'
@@ -97,7 +98,7 @@ export interface BudgetLineItem {
   estimated: number;
   actual: number;
   notes: string;
-  source: 'ai-blueprint' | 'ai-document' | 'manual';
+  source: 'ai-masterplan' | 'ai-document' | 'manual';
   taskId?: string;
   status: 'pending' | 'paid' | 'over-budget' | 'on-track';
 }
@@ -146,7 +147,7 @@ export interface Task {
   generatedDocument?: GeneratedDocument;
 }
 
-export interface Blueprint {
+export interface MasterPlan {
   eventName: string;
   eventType: string;
   summary: string;
@@ -241,7 +242,7 @@ export interface EventData {
   picContacts?: ContactPIC[];     // Internal team PICs (for chairman mode)
   externalContacts?: ExternalContact[]; // Vendors, sponsors, etc.
   // ──────────────────────────────────────────────────────────
-  blueprint?: Blueprint;
+  masterPlan?: MasterPlan;
   simulations: SimulationResult[];
   liveUpdates: LiveUpdate[];
   execution?: ExecutionState;
@@ -287,7 +288,7 @@ interface EventStore {
   // Basic actions
   setCurrentEvent: (event: EventData) => void;
   updateEventStage: (stage: EventStage) => void;
-  updateBlueprint: (blueprint: Blueprint) => void;
+  updateMasterPlan: (masterPlan: MasterPlan) => void;
   addSimulation: (result: SimulationResult) => void;
   addLiveUpdate: (update: LiveUpdate) => void;
   setAiLoading: (loading: boolean) => void;
@@ -308,7 +309,7 @@ interface EventStore {
   saveCurrentEvent: () => Promise<void>;
 
   // Duplicate event
-  duplicateEvent: (sourceEventId: string, overrides: { name: string; timeline?: string; copyBlueprint: boolean; copyContacts: boolean }) => string | null;
+  duplicateEvent: (sourceEventId: string, overrides: { name: string; timeline?: string; copyMasterPlan: boolean; copyContacts: boolean }) => string | null;
 
   // Execution Engine actions
   updateTaskResolution: (taskId: string, notes: string, attachments?: string[]) => void;
@@ -349,7 +350,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
     const eventRef = doc(db, 'users', user.uid, 'events', eventId);
     const unsubscribe = onSnapshot(eventRef, (snap) => {
       if (snap.exists()) {
-        set({ currentEvent: snap.data() as EventData });
+        set({ currentEvent: normalizeEvent(snap.data() as Record<string, unknown>) });
       }
     });
     return unsubscribe;
@@ -374,8 +375,8 @@ export const useEventStore = create<EventStore>((set, get) => ({
     currentEvent: state.currentEvent ? { ...state.currentEvent, dataLanguage: lang } : null
   })),
 
-  updateBlueprint: (blueprint) => set(state => ({
-    currentEvent: state.currentEvent ? { ...state.currentEvent, blueprint } : null
+  updateMasterPlan: (masterPlan) => set(state => ({
+    currentEvent: state.currentEvent ? { ...state.currentEvent, masterPlan } : null
   })),
 
   addSimulation: (result) => set(state => ({
@@ -461,7 +462,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
     const eventsCol = collection(db, 'users', user.uid, 'events');
     const snapshot = await getDocs(eventsCol);
     const evts: EventData[] = [];
-    snapshot.forEach(docSnap => evts.push(docSnap.data() as EventData));
+    snapshot.forEach(docSnap => evts.push(normalizeEvent(docSnap.data() as Record<string, unknown>)));
     set({ events: evts });
     return evts;
   },
@@ -476,11 +477,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
     const newId = `evt-${Date.now()}`;
     const now = new Date().toISOString();
 
-    // Deep-clone blueprint if requested, resetting task statuses
-    let clonedBlueprint = overrides.copyBlueprint && source.blueprint
+    // Deep-clone masterPlan if requested, resetting task statuses
+    let clonedMasterPlan = overrides.copyMasterPlan && source.masterPlan
       ? {
-          ...source.blueprint,
-          divisions: source.blueprint.divisions.map(div => ({
+          ...source.masterPlan,
+          divisions: source.masterPlan.divisions.map(div => ({
             ...div,
             tasks: div.tasks.map(task => ({ ...task, status: 'pending' as const })),
           })),
@@ -494,8 +495,8 @@ export const useEventStore = create<EventStore>((set, get) => ({
       id: newId,
       name: overrides.name,
       timeline: overrides.timeline || source.timeline,
-      stage: 'blueprint' as EventStage,
-      blueprint: clonedBlueprint,
+      stage: 'masterplan' as EventStage,
+      masterPlan: clonedMasterPlan,
       simulations: [],
       liveUpdates: [],
       agentActions: [],
@@ -529,9 +530,9 @@ export const useEventStore = create<EventStore>((set, get) => ({
         : t
     );
 
-    const newBlueprint: Blueprint | undefined = state.currentEvent.blueprint ? {
-      ...state.currentEvent.blueprint,
-      divisions: state.currentEvent.blueprint.divisions.map(div => ({
+    const newMasterPlan: MasterPlan | undefined = state.currentEvent.masterPlan ? {
+      ...state.currentEvent.masterPlan,
+      divisions: state.currentEvent.masterPlan.divisions.map(div => ({
         ...div,
         tasks: div.tasks.map((t): Task =>
           t.id === taskId
@@ -544,7 +545,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
     set({
       currentEvent: {
         ...state.currentEvent,
-        blueprint: newBlueprint || state.currentEvent.blueprint!,
+        masterPlan: newMasterPlan || state.currentEvent.masterPlan!,
         execution: {
           ...state.currentEvent.execution,
           dagTasks: newDagTasks
@@ -555,11 +556,11 @@ export const useEventStore = create<EventStore>((set, get) => ({
 
   batchUpdateTasks: (updates) => {
     const state = get();
-    if (!state.currentEvent?.blueprint) return;
+    if (!state.currentEvent?.masterPlan) return;
 
     const updateMap = new Map(updates.map(u => [u.taskId, u]));
 
-    const newDivisions: Division[] = state.currentEvent.blueprint.divisions.map(div => ({
+    const newDivisions: Division[] = state.currentEvent.masterPlan.divisions.map(div => ({
       ...div,
       tasks: div.tasks.map((t): Task => {
         const upd = updateMap.get(t.id);
@@ -577,8 +578,8 @@ export const useEventStore = create<EventStore>((set, get) => ({
       }),
     }));
 
-    const newBlueprint: Blueprint = {
-      ...state.currentEvent.blueprint,
+    const newMasterPlan: MasterPlan = {
+      ...state.currentEvent.masterPlan,
       divisions: newDivisions,
     };
 
@@ -592,7 +593,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
     set({
       currentEvent: {
         ...state.currentEvent,
-        blueprint: newBlueprint,
+        masterPlan: newMasterPlan,
         execution: state.currentEvent.execution && newDagTasks
           ? { ...state.currentEvent.execution, dagTasks: newDagTasks }
           : state.currentEvent.execution,
@@ -602,23 +603,23 @@ export const useEventStore = create<EventStore>((set, get) => ({
   },
 
   updateTaskCategory: (taskId, category) => set(state => {
-    if (!state.currentEvent?.blueprint) return state;
-    const newBlueprint = {
-      ...state.currentEvent.blueprint,
-      divisions: state.currentEvent.blueprint.divisions.map(div => ({
+    if (!state.currentEvent?.masterPlan) return state;
+    const newMasterPlan = {
+      ...state.currentEvent.masterPlan,
+      divisions: state.currentEvent.masterPlan.divisions.map(div => ({
         ...div,
         tasks: div.tasks.map(t => t.id === taskId ? { ...t, category } : t)
       }))
     };
-    return { currentEvent: { ...state.currentEvent, blueprint: newBlueprint } };
+    return { currentEvent: { ...state.currentEvent, masterPlan: newMasterPlan } };
   }),
 
   classifyAllTasks: (classifications) => set(state => {
-    if (!state.currentEvent?.blueprint) return state;
+    if (!state.currentEvent?.masterPlan) return state;
     const classifyMap = new Map(classifications.map(c => [c.taskId, c.category]));
-    const newBlueprint = {
-      ...state.currentEvent.blueprint,
-      divisions: state.currentEvent.blueprint.divisions.map(div => ({
+    const newMasterPlan = {
+      ...state.currentEvent.masterPlan,
+      divisions: state.currentEvent.masterPlan.divisions.map(div => ({
         ...div,
         tasks: div.tasks.map(t => {
           const cat = classifyMap.get(t.id);
@@ -626,18 +627,18 @@ export const useEventStore = create<EventStore>((set, get) => ({
         })
       }))
     };
-    return { currentEvent: { ...state.currentEvent, blueprint: newBlueprint } };
+    return { currentEvent: { ...state.currentEvent, masterPlan: newMasterPlan } };
   }),
 
   setTaskDocument: (taskId, doc) => {
     const state = get();
-    if (!state.currentEvent?.blueprint) return;
-    const newDivisions: Division[] = state.currentEvent.blueprint.divisions.map(div => ({
+    if (!state.currentEvent?.masterPlan) return;
+    const newDivisions: Division[] = state.currentEvent.masterPlan.divisions.map(div => ({
       ...div,
       tasks: div.tasks.map((t): Task => t.id === taskId ? { ...t, generatedDocument: doc } : t),
     }));
-    const newBlueprint: Blueprint = { ...state.currentEvent.blueprint, divisions: newDivisions };
-    set({ currentEvent: { ...state.currentEvent, blueprint: newBlueprint } });
+    const newMasterPlan: MasterPlan = { ...state.currentEvent.masterPlan, divisions: newDivisions };
+    set({ currentEvent: { ...state.currentEvent, masterPlan: newMasterPlan } });
     debouncedSave(get);
   },
 
@@ -713,10 +714,10 @@ export const useEventStore = create<EventStore>((set, get) => ({
   },
 
   applyAutoResolve: (results) => set(state => {
-    if (!state.currentEvent?.blueprint) return state;
+    if (!state.currentEvent?.masterPlan) return state;
     const resultMap = new Map(results.map(r => [r.taskId, r]));
 
-    const newDivisions: Division[] = state.currentEvent.blueprint.divisions.map(div => ({
+    const newDivisions: Division[] = state.currentEvent.masterPlan.divisions.map(div => ({
       ...div,
       tasks: div.tasks.map((t): Task => {
         const r = resultMap.get(t.id);
@@ -736,8 +737,8 @@ export const useEventStore = create<EventStore>((set, get) => ({
       }),
     }));
 
-    const newBlueprint: Blueprint = {
-      ...state.currentEvent.blueprint,
+    const newMasterPlan: MasterPlan = {
+      ...state.currentEvent.masterPlan,
       divisions: newDivisions,
     };
 
@@ -752,7 +753,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
     return {
       currentEvent: {
         ...state.currentEvent,
-        blueprint: newBlueprint,
+        masterPlan: newMasterPlan,
         execution: state.currentEvent.execution && newDagTasks
           ? { ...state.currentEvent.execution, dagTasks: newDagTasks }
           : state.currentEvent.execution,
@@ -885,9 +886,9 @@ export const useEventStore = create<EventStore>((set, get) => ({
   })),
 
   addDagTask: (task) => set(state => {
-    let updatedBlueprint = state.currentEvent?.blueprint;
-    if (updatedBlueprint) {
-      const targetDiv = updatedBlueprint.divisions.find(d => d.id === task.divisionId);
+    let updatedMasterPlan = state.currentEvent?.masterPlan;
+    if (updatedMasterPlan) {
+      const targetDiv = updatedMasterPlan.divisions.find(d => d.id === task.divisionId);
       if (targetDiv) {
         targetDiv.tasks.push({
           id: task.id,
@@ -907,7 +908,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
     return {
       currentEvent: {
         ...state.currentEvent,
-        blueprint: updatedBlueprint,
+        masterPlan: updatedMasterPlan,
         execution: state.currentEvent.execution ? {
           ...state.currentEvent.execution,
           dagTasks: [...state.currentEvent.execution.dagTasks, task],

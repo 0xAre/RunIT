@@ -259,7 +259,7 @@ export interface EventTemplate {
   type: string;
   audience: string;
   scale: string;
-  blueprintSummary: string;
+  masterPlanSummary: string;
   divisionStructures: Array<{ name: string; pic: string; keyTasks: string[] }>;
   keyVendors: string[];
   budgetEstimates: Record<string, number>;
@@ -268,7 +268,7 @@ export interface EventTemplate {
 }
 
 export function generateEventTemplate(eventData: EventData): EventTemplate {
-  const blueprint = eventData.blueprint;
+  const masterPlan = eventData.masterPlan;
   const budget = eventData.budgetTracker;
 
   return {
@@ -276,8 +276,8 @@ export function generateEventTemplate(eventData: EventData): EventTemplate {
     type: eventData.type,
     audience: eventData.audience,
     scale: eventData.scale,
-    blueprintSummary: blueprint?.summary || '',
-    divisionStructures: (blueprint?.divisions || []).map(d => ({
+    masterPlanSummary: masterPlan?.summary || '',
+    divisionStructures: (masterPlan?.divisions || []).map(d => ({
       name: d.name,
       pic: d.pic,
       keyTasks: d.tasks.slice(0, 5).map(t => t.title),

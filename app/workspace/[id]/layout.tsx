@@ -15,7 +15,7 @@ import { dict } from '@/lib/i18n';
 const STAGE_COLOR: Record<string, string> = {
   overview:   'var(--color-mint)',
   committee:  'var(--color-stage-copilot, #7C6AF5)',
-  blueprint:  'var(--color-stage-blueprint, #25D0AB)',
+  'master-plan': 'var(--color-stage-masterplan, #25D0AB)',
   execution:  'var(--color-stage-live, #55B467)',
   simulate:   'var(--color-stage-simulate, #FBBF24)',
   research:   'var(--color-teal, #00ADB5)',
@@ -25,7 +25,7 @@ const STAGE_COLOR: Record<string, string> = {
 const STAGE_BG: Record<string, string> = {
   overview:   'rgba(37,208,171,0.08)',
   committee:  'rgba(124,106,245,0.08)',
-  blueprint:  'rgba(37,208,171,0.07)',
+  'master-plan': 'rgba(37,208,171,0.07)',
   execution:  'rgba(85,180,103,0.07)',
   simulate:   'rgba(251,191,36,0.07)',
   research:   'rgba(0,173,181,0.08)',
@@ -82,7 +82,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   // ── Auto-translate when language changes ─────────────────────
   useEffect(() => {
     const handleTranslate = async () => {
-      if (!currentEvent || !currentEvent.blueprint) return;
+      if (!currentEvent || !currentEvent.masterPlan) return;
       // If dataLanguage is not set, we assume it was generated in the current lang initially.
       // But if it's set and different from the UI lang, translate it!
       if (currentEvent.dataLanguage && currentEvent.dataLanguage !== lang) {
@@ -91,12 +91,12 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           const res = await fetch('/api/ai/translate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blueprint: currentEvent.blueprint, targetLang: lang })
+            body: JSON.stringify({ masterPlan: currentEvent.masterPlan, targetLang: lang })
           });
           if (res.ok) {
-            const { blueprint } = await res.json();
-            if (blueprint) {
-              useEventStore.getState().updateBlueprint(blueprint);
+            const { masterPlan } = await res.json();
+            if (masterPlan) {
+              useEventStore.getState().updateMasterPlan(masterPlan);
               useEventStore.getState().updateEventDataLanguage(lang);
             }
           }
@@ -108,7 +108,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       }
     };
     handleTranslate();
-  }, [lang, currentEvent?.dataLanguage, currentEvent?.blueprint, currentEvent?.id]);
+  }, [lang, currentEvent?.dataLanguage, currentEvent?.masterPlan, currentEvent?.id]);
 
 
 
@@ -128,14 +128,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const navItems = [
     { href: 'overview',   label: t.sideOverview,      icon: LayoutDashboard },
     { href: 'committee',  label: t.sideAiCommittee,   icon: Bot },
-    { href: 'blueprint',  label: t.sideBlueprint,     icon: FileText },
+    { href: 'master-plan',  label: t.sideMasterPlan,     icon: FileText },
     { href: 'execution',  label: 'Execution',         icon: KanbanSquare },
     { href: 'simulate',   label: t.sideSimulation,    icon: Shield },
     { href: 'research',   label: 'Research Hub',      icon: Search },
     { href: 'report',     label: t.sideReport,        icon: FileBarChart },
   ];
 
-  const stageOrder   = ['overview', 'committee', 'blueprint', 'execution', 'simulate', 'research', 'report'];
+  const stageOrder   = ['overview', 'committee', 'master-plan', 'execution', 'simulate', 'research', 'report'];
   const currentIndex = stageOrder.indexOf(canonicalPage);
 
   // ── Loading skeleton while Firestore hydrates ─────────────────

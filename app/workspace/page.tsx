@@ -192,8 +192,8 @@ export default function WorkspaceDashboard() {
                       <span className="clean-label">{t.dashTasks}</span>
                     </div>
                     <p style={{ fontWeight: 500, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                      {event.blueprint ? (
-                        Object.values(event.blueprint.divisions).reduce((acc: number, div: any) => acc + (div.tasks?.length || 0), 0)
+                      {event.masterPlan ? (
+                        Object.values(event.masterPlan.divisions).reduce((acc: number, div: any) => acc + (div.tasks?.length || 0), 0)
                       ) : '0'}
                     </p>
                   </div>

@@ -90,20 +90,20 @@ const nodeTypes = {
 
 export default function DependenciesPage() {
   const { currentEvent } = useEventStore();
-  const blueprint = currentEvent?.blueprint;
+  const masterPlan = currentEvent?.masterPlan;
   const execution = currentEvent?.execution;
 
-  // Use execution DAG tasks when in live mode, else fall back to blueprint tasks
+  // Use execution DAG tasks when in live mode, else fall back to masterPlan tasks
   const liveTasks = execution?.dagTasks;
   const criticalPathIds = new Set(execution?.criticalPath ?? []);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    if (!blueprint) return { initialNodes: [], initialEdges: [] };
+    if (!masterPlan) return { initialNodes: [], initialEdges: [] };
 
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    blueprint.divisions.forEach((div, divIdx) => {
+    masterPlan.divisions.forEach((div, divIdx) => {
       const divX = divIdx * 300;
       const divTasks = liveTasks
         ? liveTasks.filter(t => t.divisionId === div.id)
@@ -143,7 +143,7 @@ export default function DependenciesPage() {
     const renderedNodeIds = new Set(nodes.map(n => n.id));
 
     // Second pass to create edges securely
-    blueprint.divisions.forEach((div) => {
+    masterPlan.divisions.forEach((div) => {
       const divTasks = liveTasks
         ? liveTasks.filter(t => t.divisionId === div.id)
         : div.tasks;
@@ -187,7 +187,7 @@ export default function DependenciesPage() {
     });
 
     return { initialNodes: nodes, initialEdges: edges };
-  }, [blueprint, liveTasks, criticalPathIds]);
+  }, [masterPlan, liveTasks, criticalPathIds]);
 
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -197,7 +197,7 @@ export default function DependenciesPage() {
     [setEdges]
   );
 
-  if (!blueprint) {
+  if (!masterPlan) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: '1rem' }}>
         <p style={{ color: 'var(--color-text-secondary)' }}>No Master Plan Data Available</p>

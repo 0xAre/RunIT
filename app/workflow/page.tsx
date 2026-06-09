@@ -12,7 +12,7 @@ import '../landing.css';
 /* ── Stage Data ──────────────────────────────────────────── */
 const STAGES = [
   { id: 'brief',       num: '01', label: 'Brief',        color: '#00ADB5' },
-  { id: 'blueprint',   num: '02', label: 'Blueprint',    color: '#848DFF' },
+  { id: 'master-plan',   num: '02', label: 'Master Plan',    color: '#848DFF' },
   { id: 'deps',        num: '03', label: 'Dependencies', color: '#6E78FF' },
   { id: 'simulate',    num: '04', label: 'Simulate',     color: '#FBBF24' },
   { id: 'live',        num: '05', label: 'Live',         color: '#55B467' },
@@ -21,7 +21,7 @@ const STAGES = [
 ];
 
 const COMPARE_ROWS = [
-  { old: 'Spreadsheet manual & GDocs', newV: 'AI Blueprint auto-generate' },
+  { old: 'Spreadsheet manual & GDocs', newV: 'AI Master Plan auto-generate' },
   { old: 'Group chat tersebar di WA', newV: 'Control Room terpusat' },
   { old: 'Tidak ada dry-run', newV: 'Simulate mode sebelum H-Day' },
   { old: 'Laporan manual post-event', newV: 'Auto-generate post-event report' },
@@ -57,13 +57,13 @@ const STAGE_DETAILS = [
     reverse: false,
   },
   {
-    id: 'blueprint',
+    id: 'master-plan',
     num: '02',
     color: '#848DFF',
     titleEN: 'Master Plan.\nReady in Seconds.',
     titleID: 'Master Plan.\nSiap dalam Detik.',
-    descEN: 'From your brief, the AI instantly generates a complete operational blueprint — tasks, owners, deadlines, and critical paths — all mapped and ready to execute.',
-    descID: 'Dari brief Anda, AI langsung menghasilkan blueprint operasional lengkap — tugas, penanggung jawab, tenggat waktu, dan jalur kritis — semua terpetakan.',
+    descEN: 'From your brief, the AI instantly generates a complete operational master plan — tasks, owners, deadlines, and critical paths — all mapped and ready to execute.',
+    descID: 'Dari brief Anda, AI langsung menghasilkan master plan operasional lengkap — tugas, penanggung jawab, tenggat waktu, dan jalur kritis — semua terpetakan.',
     bullets: [
       { en: 'Full task & timeline generation', id: 'Generasi tugas & timeline lengkap' },
       { en: 'DAG critical path visualization', id: 'Visualisasi jalur kritis DAG' },

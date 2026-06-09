@@ -17,14 +17,14 @@ export async function POST(req: NextRequest) {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-    const blueprint = eventData.blueprint;
+    const masterPlan = eventData.masterPlan;
     const organizerRole = eventData.organizerRole || 'solo';
     const isSolo = organizerRole === 'solo';
     const externalContacts = eventData.externalContacts || [];
     const picContacts = eventData.picContacts || [];
 
-    // Build a summary of tasks from blueprint
-    const allTasks = blueprint?.divisions?.flatMap((d: any) =>
+    // Build a summary of tasks from masterPlan
+    const allTasks = masterPlan?.divisions?.flatMap((d: any) =>
       d.tasks.map((t: any) => ({ ...t, divisionName: d.name }))
     ) || [];
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         : 'Belum ada kepala divisi yang didaftarkan.';
 
     const prompt = `Kamu adalah AI Auto-Pilot untuk event organizer aplikasi RunIT.
-Tugasmu adalah menganalisis blueprint event dan secara AKTIF menjalankan perencanaan awal.
+Tugasmu adalah menganalisis master plan event dan secara AKTIF menjalankan perencanaan awal.
 
 EVENT:
 - Nama: ${eventData.name}
@@ -72,7 +72,7 @@ ${contactContext}
 Tugasmu: Hasilkan 3-5 "Agent Action" yang AKTIF dan KONKRET. Setiap action adalah sesuatu yang bisa segera dilakukan.
 
 Untuk setiap action, kamu harus:
-1. Mengidentifikasi kebutuhan spesifik dari blueprint
+1. Mengidentifikasi kebutuhan spesifik dari masterPlan
 2. Memberikan REKOMENDASI NYATA (bukan template) — misalnya nama venue sungguhan, tips negosiasi spesifik, contoh vendor kategori tertentu
 3. Membuat draft pesan yang sudah siap dikirim
 

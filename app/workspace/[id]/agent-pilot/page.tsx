@@ -56,7 +56,7 @@ const AGENT_TYPE_LABEL: Record<string, string> = {
 /* ── Loading Animation ─────────────────────────────── */
 function PilotLoader() {
   const phases = [
-    'Membaca blueprint event...',
+    'Membaca master plan event...',
     'Menganalisis task prioritas...',
     'Mencari vendor & venue yang relevan...',
     'Menyusun draft komunikasi...',
@@ -467,7 +467,7 @@ export default function AgentPilotPage() {
         });
       });
     } catch (err: any) {
-      setError('Gagal menjalankan Auto-Pilot. Pastikan blueprint sudah dibuat dan coba lagi.');
+      setError('Gagal menjalankan Auto-Pilot. Pastikan master plan sudah dibuat dan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -481,16 +481,16 @@ export default function AgentPilotPage() {
     );
   }
 
-  if (!currentEvent.blueprint) {
+  if (!currentEvent.masterPlan) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: '1rem', textAlign: 'center' }}>
         <Bot size={40} color="var(--color-text-muted)" />
-        <p style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>Blueprint belum dibuat</p>
+        <p style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>MasterPlan belum dibuat</p>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', maxWidth: 360 }}>
-          Auto-Pilot membutuhkan blueprint untuk menganalisis kebutuhan event. Buat blueprint terlebih dahulu.
+          Auto-Pilot membutuhkan master plan untuk menganalisis kebutuhan event. Buat master plan terlebih dahulu.
         </p>
-        <button className="btn-primary" onClick={() => router.push(`/workspace/${params.id}/blueprint`)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <ArrowRight size={15} /> Buat Blueprint
+        <button className="btn-primary" onClick={() => router.push(`/workspace/${params.id}/master-plan`)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ArrowRight size={15} /> Buat MasterPlan
         </button>
       </div>
     );
@@ -516,7 +516,7 @@ export default function AgentPilotPage() {
             </h1>
           </div>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.88rem', maxWidth: 560 }}>
-            AI membaca blueprint Anda, mencari vendor/venue yang sesuai, dan menyiapkan draft pesan komunikasi yang tinggal Anda kirim.
+            AI membaca master plan Anda, mencari vendor/venue yang sesuai, dan menyiapkan draft pesan komunikasi yang tinggal Anda kirim.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
@@ -560,7 +560,7 @@ export default function AgentPilotPage() {
               Siap untuk di-aktivasi
             </p>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, maxWidth: 500 }}>
-              Klik <strong>"Mulai Auto-Pilot"</strong> dan AI akan menganalisis blueprint <strong>{currentEvent.name}</strong>, lalu langsung mencari vendor, venue, dan menyiapkan draft komunikasi berdasarkan kebutuhan event Anda.
+              Klik <strong>"Mulai Auto-Pilot"</strong> dan AI akan menganalisis master plan <strong>{currentEvent.name}</strong>, lalu langsung mencari vendor, venue, dan menyiapkan draft komunikasi berdasarkan kebutuhan event Anda.
             </p>
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
               {[

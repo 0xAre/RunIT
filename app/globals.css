@@ -106,7 +106,7 @@
   --color-info-border:    #273E89;
 
   /* --- STAGE COLORS --- */
-  --color-stage-blueprint:    #25D0AB;
+  --color-stage-masterplan:    #25D0AB;
   --color-stage-dependencies: #848DFF;
   --color-stage-simulate:     #FBBF24;
   --color-stage-live:         #55B467;
@@ -626,7 +626,7 @@ textarea.input-field {
 }
 
 /* Stage badges */
-[data-stage="blueprint"]    { color: var(--color-stage-blueprint);    background: rgba(37,208,171,0.08);   border-color: var(--color-mint-border); }
+[data-stage="masterplan"]    { color: var(--color-stage-masterplan);    background: rgba(37,208,171,0.08);   border-color: var(--color-mint-border); }
 [data-stage="dependencies"] { color: var(--color-stage-dependencies); background: rgba(132,141,255,0.08);  border-color: var(--color-violet-border); }
 [data-stage="simulate"]     { color: var(--color-stage-simulate);     background: rgba(251,191,36,0.08);   border-color: var(--color-amber-border); }
 [data-stage="live"]         { color: var(--color-stage-live);         background: rgba(85,180,103,0.08);   border-color: rgba(85,180,103,0.3); }

@@ -290,7 +290,7 @@ export interface EventIntelligenceBrief {
  * Fetches real-time market intelligence for an event type using 3 parallel
  * Search API queries: trends, budget benchmarks, and best practices.
  *
- * Designed for the onboarding flow (Stage 1) to ground Gemini blueprint
+ * Designed for the onboarding flow (Stage 1) to ground Gemini masterPlan
  * generation with fresh, web-sourced context.
  *
  * Cost: ~3× $0.005 = $0.015 per call (no livecrawl — speed over depth).

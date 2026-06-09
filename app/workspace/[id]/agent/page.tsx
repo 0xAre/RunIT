@@ -296,7 +296,7 @@ export default function AgentInboxPage() {
     if (!currentEvent) return;
     setIsLoading(true);
     try {
-      const endpoint = currentEvent.blueprint ? '/api/ai/agent-inbox' : '/api/ai/committee-sourcing';
+      const endpoint = currentEvent.masterPlan ? '/api/ai/agent-inbox' : '/api/ai/committee-sourcing';
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
