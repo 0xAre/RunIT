@@ -524,7 +524,7 @@ export default function ControlRoomPage() {
         <Cpu size={40} color="var(--color-text-muted)" />
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: 'var(--color-text-primary)', fontWeight: 600, marginBottom: '0.5rem' }}>No Event Loaded</p>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Generate a blueprint first to initialize the Control Room.</p>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Generate a master plan first to initialize the Control Room.</p>
         </div>
       </div>
     );

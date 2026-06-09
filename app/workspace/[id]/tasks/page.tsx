@@ -5,9 +5,9 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { useEventStore, type DagTask } from '@/store/eventStore';
 import { calculateDivisionLoad, calculateOCS } from '@/lib/dag-engine';
 import { KanbanSquare, Clock, AlertTriangle, Activity, Sparkles } from 'lucide-react';
-import { TaskModal } from '@/src/components/TaskModal';
-import DraftModal, { type DraftPayload } from '@/src/components/DraftModal';
-import SmartAlertBar from '@/src/components/SmartAlertBar';
+import { TaskModal } from '@/components/TaskModal';
+import DraftModal, { type DraftPayload } from '@/components/DraftModal';
+import SmartAlertBar from '@/components/SmartAlertBar';
 
 const COLUMNS = [
   { id: 'pending', title: 'Pending', color: 'var(--color-ground-3)' },
@@ -142,7 +142,7 @@ export default function TasksBoardPage() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-ground-1)' }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 border-b border-[var(--color-border)] bg-[var(--color-ground-1)]">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ padding: '0.5rem', background: 'var(--color-ground-2)', borderRadius: '8px' }}>
             <KanbanSquare size={18} color="var(--color-mint)" />

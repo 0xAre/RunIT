@@ -1,6 +1,6 @@
 @import "tailwindcss";
-
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@source "../src";
+/* Fonts are loaded via next/font in layout.tsx — no @import url() needed */
 
 /* ============================================================
    RUNIT DESIGN SYSTEM v3.0
@@ -127,9 +127,11 @@
   --space-4xl: 40px;
 
   /* --- FONTS --- */
-  --font-heading: 'Unbounded', ui-sans-serif, system-ui, sans-serif;
-  --font-body:    'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono:    'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  /* next/font injects CSS vars: --font-display-next, --font-body-next, --font-heading-next, --font-mono-next */
+  --font-heading: var(--font-heading-next, 'Unbounded', ui-sans-serif, system-ui, sans-serif);
+  --font-body:    var(--font-body-next, 'Inter', ui-sans-serif, system-ui, sans-serif);
+  --font-mono:    var(--font-mono-next, 'JetBrains Mono', 'Fira Code', ui-monospace, monospace);
+  --font-display: var(--font-display-next, 'Manrope', ui-sans-serif, sans-serif);
   /* aliases */
   --font-sans: var(--font-body);
 
@@ -747,6 +749,43 @@ textarea.input-field {
 }
 
 /* ============================================================
+   PAGE TRANSITION (Next.js App Router)
+   ============================================================ */
+
+/* Instant paint — no white flash between routes */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: page-fade-out;
+}
+::view-transition-new(root) {
+  animation-name: page-fade-in;
+}
+
+@keyframes page-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Smooth content entrance on route change */
+.page-enter {
+  animation: page-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes page-slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
    PREFERS REDUCED MOTION
    ============================================================ */
 
@@ -756,5 +795,73 @@ textarea.input-field {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   PRINT STYLES — PDF Export for LPJ, Sponsor Report, Budget
+   Activated via window.print() or Ctrl+P
+   ============================================================ */
+@media print {
+  @page {
+    size: A4;
+    margin: 20mm;
+  }
+
+  * {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Hide UI chrome */
+  nav, header, footer, button, .btn-primary, .btn-ghost,
+  [role="tablist"], [role="banner"],
+  .no-print, .sidebar, .topbar {
+    display: none !important;
+  }
+
+  /* Show only printable area */
+  .print-area, .print-area * {
+    visibility: visible !important;
+  }
+
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Typography */
+  h1 { font-size: 24pt !important; margin-bottom: 12pt !important; }
+  h2 { font-size: 18pt !important; margin-bottom: 10pt !important; }
+  h3 { font-size: 14pt !important; margin-bottom: 8pt !important; }
+  h4 { font-size: 12pt !important; margin-bottom: 6pt !important; }
+  p, li { font-size: 10pt !important; line-height: 1.6 !important; }
+
+  table { border-collapse: collapse !important; width: 100% !important; margin: 8pt 0 !important; }
+  th, td { border: 1px solid #000 !important; padding: 4pt 8pt !important; font-size: 9pt !important; text-align: left !important; }
+  th { background: #f0f0f0 !important; font-weight: 700 !important; }
+
+  /* Section breaks */
+  .print-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 16pt;
+  }
+
+  .print-page-break {
+    page-break-before: always;
+  }
+
+  /* Links */
+  a { text-decoration: underline !important; }
+  a[href]:after { content: " (" attr(href) ")" !important; font-size: 8pt !important; color: #666 !important; }
+
+  /* Progress bars become borders */
+  [style*="height: 100%"] {
+    background-color: #000 !important;
   }
 }

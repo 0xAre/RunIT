@@ -1,0 +1,15 @@
+Ini bukan sekadar task management.
+RunIT punya dua belas specialized AI agents
+yang benar-benar menyelesaikan task.
+
+Masing-masing agent terkoneksi ke internet via You dot com,
+jadi research-nya real-time dan grounded.
+AI mencari vendor beneran, bukan halusinasi.
+Menyusun draft WhatsApp yang tinggal kirim.
+Bahkan bikin proposal sponsorship lengkap.
+
+Satu klik Auto-Pilot,
+dan puluhan task kelar otomatis.
+Task yang butuh keputusan manusia —
+seperti budget besar atau legal —
+di-flag khusus. Kamu tinggal review dan approve.

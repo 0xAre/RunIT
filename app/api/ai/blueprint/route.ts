@@ -3,8 +3,8 @@ import { generateEventBlueprint } from '@/lib/gemini';
 
 export async function POST(req: NextRequest) {
   try {
-    const { lang, ...eventData } = await req.json();
-    const blueprint = await generateEventBlueprint(eventData, lang || 'en');
+    const { lang, marketContext, ...eventData } = await req.json();
+    const blueprint = await generateEventBlueprint(eventData, lang || 'en', marketContext);
     return NextResponse.json({ blueprint });
   } catch (error) {
     console.error('Blueprint generation error:', error);
@@ -14,3 +14,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

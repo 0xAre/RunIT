@@ -1,0 +1,17 @@
+Ini fitur yang bikin RunIT benar-benar berbeda:
+DAG Execution Engine.
+
+Semua task dimodelkan sebagai dependency graph.
+AI menghitung critical path —
+task mana yang benar-benar nggak boleh meleset.
+Ada Operational Confidence Score yang update real-time.
+
+Dan yang paling powerful: Simulasi.
+Mau lihat apa yang terjadi
+kalau speaker telat tiga puluh menit?
+Atau listrik mati di main hall?
+Atau sponsor utama mundur ha min tujuh?
+
+Satu klik — AI langsung menunjukkan
+efek dominonya ke seluruh operasional,
+lengkap dengan contingency plan yang siap dieksekusi.

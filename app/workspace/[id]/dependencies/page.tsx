@@ -200,7 +200,7 @@ export default function DependenciesPage() {
   if (!blueprint) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: '1rem' }}>
-        <p style={{ color: 'var(--color-text-secondary)' }}>No Blueprint Data Available</p>
+        <p style={{ color: 'var(--color-text-secondary)' }}>No Master Plan Data Available</p>
       </div>
     );
   }
@@ -208,7 +208,7 @@ export default function DependenciesPage() {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-ground-1)' }}>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[var(--color-ground-1)] border-b border-[var(--color-border)] p-4 md:px-6 md:py-5">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ padding: '0.5rem', background: 'var(--color-ground-2)', borderRadius: '8px' }}>
             <GitBranch size={18} color="var(--color-mint)" />
@@ -224,7 +224,7 @@ export default function DependenciesPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="flex flex-wrap gap-4 items-center">
           {/* Live OCS badge */}
           {execution?.isLive && (
             <div style={{
@@ -238,7 +238,7 @@ export default function DependenciesPage() {
             </div>
           )}
           {/* Legend */}
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div className="flex flex-wrap gap-4 items-center">
             {execution?.isLive ? (
               [{ label: 'Critical Path', color: 'var(--color-red)' }, { label: 'Done', color: 'var(--color-mint)' }, { label: 'Delayed', color: 'var(--color-amber)' }]
                 .map(item => (

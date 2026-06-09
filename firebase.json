@@ -1,0 +1,21 @@
+{
+  "hosting": {
+    "site": "runit",
+    "source": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "docs/**",
+      "scripts/**",
+      ".agents/**",
+      "draft_bin/**"
+    ],
+    "frameworksBackend": {
+      "region": "asia-southeast2"
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

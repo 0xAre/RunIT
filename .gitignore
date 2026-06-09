@@ -36,6 +36,16 @@ yarn-error.log*
 # vercel
 .vercel
 
+# firebase local deploy artifacts
+.firebase/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# cursor agent skills (local tooling, not app source)
+.agents/
+skills-lock.json
+
+# local drafts and scratch (canonical docs live in docs/)
+draft_bin/

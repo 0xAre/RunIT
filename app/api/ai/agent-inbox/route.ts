@@ -7,8 +7,8 @@ export async function POST(req: NextRequest) {
   try {
     const { eventData } = await req.json();
 
-    if (!eventData || !eventData.blueprint) {
-      return NextResponse.json({ error: 'Missing blueprint data' }, { status: 400 });
+    if (!eventData?.name) {
+      return NextResponse.json({ error: 'Missing event data' }, { status: 400 });
     }
 
     if (!process.env.GEMINI_API_KEY) {
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const blueprint = eventData.blueprint;
-    const tasks = blueprint.divisions?.flatMap((d: any) => d.tasks || []) || [];
+    const tasks = blueprint?.divisions?.flatMap((d: { tasks?: { title: string }[] }) => d.tasks || []) || [];
     const hasExecution = !!eventData.execution;
 
     // ── Role & Contact Context ────────────────────────────────────────────────────
@@ -81,6 +81,9 @@ Untuk setiap action item, hasilkan:
 5. "whatsappDraft": pesan WA siap kirim (maks 100 kata, bahasa Indonesia natural)
 6. "emailDraft": draft email profesional (3-4 kalimat)
 7. "emailSubject": subject email
+8. "telegramDraft": versi Telegram
+9. "instagramDraft": caption/DM Instagram singkat
+10. "recipientInstagram": username IG tanpa @ jika relevan
 ${recipientInstructions}
 
 Kembalikan HANYA JSON array dengan 4-5 objek berikut:
@@ -95,7 +98,10 @@ Kembalikan HANYA JSON array dengan 4-5 objek berikut:
     "emailSubject": "string",
     "recipientName": "string",
     "recipientPhone": "string",
-    "recipientEmail": "string"
+    "recipientEmail": "string",
+    "telegramDraft": "string",
+    "instagramDraft": "string",
+    "recipientInstagram": "string"
   }
 ]`;
 

@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+
+
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEventStore, type Blueprint } from '@/store/eventStore';
+import { classifyAllTasks, CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/task-agents';
 import {
   Brain, Zap, Users, Calendar, DollarSign, AlertTriangle,
   CheckCircle, Clock, ChevronRight, RefreshCw, Play, ArrowRight,
-  Terminal, Loader2, Info, Target, Activity, Edit3, Plus, Save, Bot
+  Loader2, Target, Activity, Edit3, Plus, Save, Bot, Tag,
 } from 'lucide-react';
 import { useLangStore } from '@/store/langStore';
 
@@ -28,11 +31,13 @@ const severityColors = {
 /* ── Loading State ────────────────────────────────────────────── */
 function LoadingBlueprint() {
   const steps = [
+    'Fetching real-time market intelligence...',
     'Analyzing event parameters...',
     'Building divisional structures...',
-    'Calculating dependencies...',
-    'Generating operational blueprint...',
+    'Grounding master plan with web data...',
+    'Generating operational master plan...',
   ];
+
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
@@ -84,39 +89,175 @@ function PanelHeader({ title, icon: Icon }: { title: string; icon?: any }) {
   );
 }
 
+/* ── Compact View for Small Events ───────────────────────────── */
+function BlueprintCompactView({
+  blueprint, onExpress, onFull, router, params
+}: {
+  blueprint: Blueprint;
+  onExpress: () => void;
+  onFull: () => void;
+  router: any;
+  params: any;
+}) {
+  const totalTasks = blueprint.divisions.reduce((a, d) => a + d.tasks.length, 0);
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-5 max-w-[760px] mx-auto pb-12 px-4 md:px-0">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.375rem' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
+              {blueprint.eventName}
+            </h1>
+            <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', borderRadius: 12, background: 'rgba(37,208,171,0.1)', border: '1px solid rgba(37,208,171,0.3)', color: 'var(--color-mint)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Compact Mode
+            </span>
+          </div>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', maxWidth: 540, lineHeight: 1.55 }}>{blueprint.summary}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+          <button className="btn-ghost" onClick={onFull} style={{ fontSize: '0.78rem' }}>Full View</button>
+          <button
+            onClick={() => router.push(`/workspace/${params.id}/execution`)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.875rem', borderRadius: 8, background: 'var(--color-mint)', border: 'none', color: '#000', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}
+          >
+            <Target size={13} /> Ke Execution
+          </button>
+        </div>
+      </div>
+
+      {/* Express Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-br from-amber-500/10 to-mint-500/10 border border-amber-500/30 rounded-xl p-4">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Zap size={18} color="#f59e0b" style={{ flexShrink: 0 }} />
+          <div>
+            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>Express Mode Tersedia</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0.1rem 0 0' }}>{totalTasks} tasks di {blueprint.divisions.length} divisi · Langsung masuk ke execution</p>
+          </div>
+        </div>
+        <button
+          onClick={onExpress}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: 8, background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', border: 'none', color: '#000', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
+          <Zap size={13} /> ⚡ Express: Skip ke Execution
+        </button>
+      </div>
+
+      {/* Divisions + tasks in one panel */}
+      <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle size={15} color="var(--color-mint)" />
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Task Overview</span>
+          <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{totalTasks} tasks total</span>
+        </div>
+        <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {blueprint.divisions.map(div => (
+            <div key={div.id}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.625rem' }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: div.color || 'var(--color-mint)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{div.name}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>PIC: {div.pic}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>{div.tasks.length} tasks</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', paddingLeft: '1.25rem' }}>
+                  {div.tasks.map(task => (
+                    <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'var(--color-ground-0)', borderRadius: 6, border: '1px solid var(--color-border)' }}>
+                      <span style={{ flex: 1, fontSize: '0.83rem', color: 'var(--color-text-primary)' }}>{task.title}</span>
+                      {task.category && (
+                        <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: 10, background: `${CATEGORY_COLORS[task.category]}18`, color: CATEGORY_COLORS[task.category], fontWeight: 600, textTransform: 'capitalize' }}>
+                          {CATEGORY_LABELS[task.category]}
+                        </span>
+                      )}
+                      <span style={{ fontSize: '0.7rem', color: task.priority === 'critical' ? 'var(--color-red)' : task.priority === 'high' ? 'var(--color-amber)' : 'var(--color-mint)', fontWeight: 600, textTransform: 'uppercase' }}>{task.priority}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{task.deadline}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Risks quick view */}
+      {blueprint.risks.length > 0 && (
+        <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={15} color="var(--color-amber)" />
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Risiko Utama</span>
+          </div>
+          <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {blueprint.risks.map(r => (
+              <div key={r.id} style={{ display: 'flex', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'var(--color-ground-0)', borderRadius: 6 }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: r.severity === 'critical' ? 'var(--color-red)' : r.severity === 'high' ? 'var(--color-amber)' : 'var(--color-teal)', textTransform: 'uppercase', whiteSpace: 'nowrap', marginTop: 1 }}>{r.severity}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '0.83rem', color: 'var(--color-text-primary)', margin: 0 }}>{r.scenario}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0.15rem 0 0' }}>💡 {r.mitigation}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 /* ── Main Page ────────────────────────────────────────────────── */
 export default function BlueprintPage() {
   const params = useParams();
   const router = useRouter();
-  const { currentEvent, updateBlueprint, updateEventStage, setAiLoading, isAiLoading, setAiError, aiError, addDagTask } = useEventStore();
+  const { currentEvent, updateBlueprint, updateEventStage, updateEventDataLanguage, setAiLoading, isAiLoading, setAiError, aiError, addDagTask, classifyAllTasks: storeClassify } = useEventStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'divisions' | 'timeline' | 'risks'>('overview');
+  const [forceFullView, setForceFullView] = useState(false);
   
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [editableSummary, setEditableSummary] = useState('');
+  const [classifiedCount, setClassifiedCount] = useState(0);
+  const [classifying, setClassifying] = useState(false);
 
   const blueprint = currentEvent?.blueprint;
+  const isSmallEvent = !forceFullView && (
+    currentEvent?.scale === 'small' ||
+    (currentEvent?.teamSize != null && currentEvent.teamSize <= 5)
+  );
 
-  useEffect(() => {
-    if (currentEvent && !currentEvent.blueprint && !isAiLoading) {
-      generateBlueprint();
+  const autoClassifyTasks = useCallback(async (bp?: Blueprint) => {
+    const blueprint = bp || currentEvent?.blueprint;
+    if (!blueprint || !currentEvent) return;
+
+    const allTasks = blueprint.divisions.flatMap(d => d.tasks.map(t => ({ id: t.id, title: t.title, description: t.description })));
+    if (allTasks.length === 0) return;
+
+    setClassifying(true);
+    try {
+      const classifications = classifyAllTasks(allTasks, currentEvent);
+      storeClassify(classifications);
+      setClassifiedCount(classifications.filter(c => c.category !== 'internal').length);
+    } catch {
+      // Non-blocking
+    } finally {
+      setClassifying(false);
     }
-    if (blueprint && !editableSummary) {
-      setEditableSummary(blueprint.summary);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentEvent?.id, blueprint?.summary]);
+  }, [currentEvent, storeClassify]);
 
   const generateBlueprint = async () => {
     if (!currentEvent) return;
     setAiLoading(true);
     setAiError(null);
 
+    const { lang } = useLangStore.getState();
+
     try {
-      const { lang } = useLangStore.getState();
+      const marketContextKey = `market-context-${currentEvent.id}`;
+      const marketContext = sessionStorage.getItem(marketContextKey) || undefined;
+      if (marketContext) {
+        sessionStorage.removeItem(marketContextKey);
+      }
+
       const res = await fetch('/api/ai/blueprint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...currentEvent, lang }),
+        body: JSON.stringify({ ...currentEvent, lang, marketContext }),
       });
       
       if (!res.ok) throw new Error('API call failed');
@@ -124,7 +265,9 @@ export default function BlueprintPage() {
       
       if (blueprint) {
         updateBlueprint(blueprint);
+        updateEventDataLanguage(lang);
         updateEventStage('blueprint');
+        autoClassifyTasks(blueprint);
       }
     } catch (err) {
       setAiError('Failed to generate blueprint. Showing demo blueprint.');
@@ -163,11 +306,34 @@ export default function BlueprintPage() {
         ],
       };
       updateBlueprint(mockBlueprint);
+      updateEventDataLanguage(lang);
       updateEventStage('blueprint');
     } finally {
       setAiLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (currentEvent && !currentEvent.blueprint && !isAiLoading) {
+      generateBlueprint();
+    }
+    if (blueprint && !editableSummary) {
+      setEditableSummary(blueprint.summary);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEvent?.id, blueprint?.summary]);
+
+
+  // ── Express Mode: generate (if needed) then go to execution ──
+  const handleExpressMode = async () => {
+    if (!blueprint) {
+      await generateBlueprint(); // properly await AI generation
+    }
+    // Small delay to let store update propagate
+    await new Promise(r => setTimeout(r, 200));
+    router.push(`/workspace/${params.id}/execution`);
+  };
+
 
   if (!currentEvent) {
     return (
@@ -192,19 +358,42 @@ export default function BlueprintPage() {
             <p style={{ fontSize: '0.85rem' }}>{aiError}</p>
           </div>
         )}
-        <button className="btn-primary" onClick={generateBlueprint}>
-          <Brain size={16} style={{ marginRight: '0.5rem' }} />
-          Generate Blueprint
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className="btn-primary" onClick={generateBlueprint}>
+            <Brain size={16} style={{ marginRight: '0.5rem' }} />
+            Generate Blueprint
+          </button>
+          {isSmallEvent && (
+            <button
+              onClick={handleExpressMode}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', borderRadius: 8, background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', border: 'none', color: '#000', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}
+            >
+              <Zap size={15} /> ⚡ Express Mode
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
+  // ── Compact View for small events ─────────────────────────────
+  if (isSmallEvent) {
+    return (
+      <BlueprintCompactView
+        blueprint={blueprint}
+        onExpress={handleExpressMode}
+        onFull={() => setForceFullView(true)}
+        router={router}
+        params={params}
+      />
+    );
+  }
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="flex flex-col gap-6 md:gap-8 max-w-[1200px] mx-auto p-4 md:p-8">
       
       {/* ── HEADER ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
@@ -242,12 +431,21 @@ export default function BlueprintPage() {
             </button>
           ) : (
             <button className="btn-ghost" onClick={() => setIsEditingMode(true)} style={{ fontSize: '0.85rem' }}>
-              <Edit3 size={14} /> Edit Blueprint
+              <Edit3 size={14} /> Edit Master Plan
             </button>
           )}
           
           <button className="btn-ghost" onClick={generateBlueprint} style={{ fontSize: '0.85rem' }}>
             <RefreshCw size={14} /> Regenerate
+          </button>
+          <button
+            className="btn-ghost"
+            onClick={() => autoClassifyTasks()}
+            disabled={classifying}
+            style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            {classifying ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Tag size={13} />}
+            {classifying ? 'Classifying...' : classifiedCount > 0 ? `Classified (${classifiedCount})` : 'Classify Tasks'}
           </button>
           <button
             className="btn-ghost"
@@ -257,7 +455,7 @@ export default function BlueprintPage() {
             <Play size={14} fill="currentColor" /> Simulate
           </button>
           <button
-            onClick={() => router.push(`/workspace/${params.id}/agent-pilot`)}
+            onClick={() => router.push(`/workspace/${params.id}/committee`)}
             style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem',
               padding: '0.5rem 1rem', borderRadius: '8px',
@@ -269,10 +467,10 @@ export default function BlueprintPage() {
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(0,173,181,0.2), rgba(124,106,245,0.2))'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(0,173,181,0.12), rgba(124,106,245,0.12))'; }}
           >
-            <Bot size={14} /> Auto-Pilot
+            <Bot size={14} /> AI Committee
           </button>
           <button
-            onClick={() => router.push(`/workspace/${params.id}/live`)}
+            onClick={() => router.push(`/workspace/${params.id}/execution`)}
             style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem',
               padding: '0.5rem 1rem', borderRadius: '8px',
@@ -284,7 +482,7 @@ export default function BlueprintPage() {
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(37,208,171,0.1)'; }}
           >
             <Target size={14} />
-            Launch Control Room
+            Execution Board
           </button>
         </div>
       </div>
@@ -297,11 +495,9 @@ export default function BlueprintPage() {
       )}
 
       {/* ── EXECUTION READINESS BANNER ── */}
-      <div style={{
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl p-4 sm:px-6" style={{
         background: 'linear-gradient(135deg, rgba(37,208,171,0.06) 0%, rgba(37,208,171,0.02) 100%)',
         border: '1px solid rgba(37,208,171,0.25)',
-        borderRadius: '10px', padding: '1rem 1.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ padding: '0.5rem', background: 'rgba(37,208,171,0.12)', borderRadius: 8 }}>
@@ -309,7 +505,7 @@ export default function BlueprintPage() {
           </div>
           <div>
             <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-mint)', marginBottom: '0.125rem' }}>
-              Blueprint Ready for Execution
+              Master Plan Ready for Execution
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
               {blueprint.divisions.reduce((acc, d) => acc + d.tasks.length, 0)} tasks across {blueprint.divisions.length} divisions · DAG engine initializes on Control Room launch
@@ -329,7 +525,7 @@ export default function BlueprintPage() {
             </div>
           )}
           <button
-            onClick={() => router.push(`/workspace/${params.id}/live`)}
+            onClick={() => router.push(`/workspace/${params.id}/execution`)}
             style={{
               display: 'flex', alignItems: 'center', gap: '0.375rem',
               padding: '0.45rem 0.875rem', borderRadius: 8,
@@ -341,13 +537,13 @@ export default function BlueprintPage() {
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
           >
             <Target size={12} />
-            Go to Control Room
+            Execution Board
           </button>
         </div>
       </div>
 
       {/* ── QUICK STATS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Target Participants', value: currentEvent.participants.toLocaleString(), icon: Users },
           { label: 'Crew Estimate', value: `~${currentEvent.teamSize}`, icon: Users },
@@ -405,7 +601,7 @@ export default function BlueprintPage() {
         >
           {/* OVERVIEW */}
           {activeTab === 'overview' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
               <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px' }}>
                 <PanelHeader title="Operational Phases" icon={CheckCircle} />
@@ -455,7 +651,7 @@ export default function BlueprintPage() {
 
           {/* DIVISIONS */}
           {activeTab === 'divisions' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {blueprint.divisions.map(div => (
                 <div key={div.id} style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden' }}>
                   <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -468,13 +664,20 @@ export default function BlueprintPage() {
                     </span>
                   </div>
                   <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {div.tasks.map(task => (
+                      {div.tasks.map(task => (
                       <div key={task.id} style={{ background: 'var(--color-ground-0)', border: '1px solid var(--color-border)', padding: '1rem', borderRadius: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem', alignItems: 'flex-start', gap: '1rem' }}>
                           <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>{task.title}</p>
-                          <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: priorityColors[task.priority], background: `${priorityColors[task.priority]}15`, padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-                            {task.priority}
-                          </span>
+                          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {task.category && (
+                              <span style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem', borderRadius: 10, background: `${CATEGORY_COLORS[task.category]}18`, color: CATEGORY_COLORS[task.category], fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                {CATEGORY_LABELS[task.category]}
+                              </span>
+                            )}
+                            <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: priorityColors[task.priority], background: `${priorityColors[task.priority]}15`, padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                              {task.priority}
+                            </span>
+                          </div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{task.description}</p>
@@ -570,7 +773,7 @@ export default function BlueprintPage() {
                 const sc = severityColors[risk.severity];
                 return (
                   <div key={risk.id} style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden' }}>
-                    <div style={{ padding: '1.25rem 1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start p-5 sm:px-6">
                       <div style={{ background: sc.bg, color: sc.color, padding: '0.625rem', borderRadius: '8px', flexShrink: 0 }}>
                         <AlertTriangle size={20} />
                       </div>

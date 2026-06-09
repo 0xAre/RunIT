@@ -3,16 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useEventStore } from '@/store/eventStore';
-import { Plus, LayoutDashboard, Database, Activity, GitBranch, Zap, ChevronRight, Calendar, Users, Globe } from 'lucide-react';
+import { useEventStore, type EventData } from '@/store/eventStore';
+import { Plus, LayoutDashboard, GitBranch, Zap, ChevronRight, Calendar, Users, Globe, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useLangStore } from '@/store/langStore';
 import { dict } from '@/lib/i18n';
+import DuplicateEventModal from '@/components/DuplicateEventModal';
 
 export default function WorkspaceDashboard() {
   const router = useRouter();
   const { events, loadUserEvents } = useEventStore();
   const [loading, setLoading] = useState(true);
+  const [duplicatingEvent, setDuplicatingEvent] = useState<EventData | null>(null);
   
   const { lang, toggleLang } = useLangStore();
   const t = dict[lang];
@@ -39,11 +41,8 @@ export default function WorkspaceDashboard() {
       <div className="grid-bg" />
 
       {/* Nav */}
-      <nav style={{
-        padding: '1rem 2rem', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', justifyItems: 'space-between',
-        background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(12px)',
-        position: 'sticky', top: 0, zIndex: 50
+      <nav className="flex items-center justify-between p-4 sm:px-8 border-b border-[var(--border)] sticky top-0 z-50" style={{
+        background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(12px)'
       }}>
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
           <div style={{
@@ -76,7 +75,7 @@ export default function WorkspaceDashboard() {
       </nav>
 
       {/* Main Content */}
-      <main style={{ flex: 1, padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', position: 'relative', zIndex: 1 }}>
+      <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12 relative z-10">
         <div style={{ marginBottom: '3rem' }}>
           <h1 style={{ fontSize: '2rem', fontWeight: 600, marginBottom: '0.5rem', letterSpacing: '-0.03em' }}>
             {t.dashTitle}
@@ -91,34 +90,37 @@ export default function WorkspaceDashboard() {
             <div className="spinner" />
           </div>
         ) : events.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ 
-              padding: '4rem 2rem', textAlign: 'center',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem',
-              border: '1px dashed var(--border-strong)', borderRadius: '12px',
-              background: 'var(--bg-card)'
-            }}
-          >
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <LayoutDashboard size={24} color="var(--text-secondary)" />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>{t.dashNoProjects}</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto' }}>
-                {t.dashNoProjectsDesc}
-              </p>
-            </div>
-            <Link href="/workspace/new">
-              <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem' }}>
-                <Plus size={16} />
-                {t.dashCreateProjectBtn}
-              </button>
-            </Link>
-          </motion.div>
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '2rem' }}>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{ 
+                width: '100%', maxWidth: '600px',
+                padding: '4rem 2rem', textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem',
+                border: '1px dashed var(--border-strong)', borderRadius: '12px',
+                background: 'var(--bg-card)'
+              }}
+            >
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <LayoutDashboard size={24} color="var(--text-secondary)" />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>{t.dashNoProjects}</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto' }}>
+                  {t.dashNoProjectsDesc}
+                </p>
+              </div>
+              <Link href="/workspace/new">
+                <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem' }}>
+                  <Plus size={16} />
+                  {t.dashCreateProjectBtn}
+                </button>
+              </Link>
+            </motion.div>
+          </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event, i) => (
               <motion.div
                 key={event.id}
@@ -126,19 +128,44 @@ export default function WorkspaceDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 className="glass glass-hover"
-                onClick={() => router.push(`/workspace/${event.id}/blueprint`)}
+                onClick={() => router.push(`/workspace/${event.id}/overview`)}
                 style={{ 
                   padding: '1.5rem', cursor: 'pointer',
                   display: 'flex', flexDirection: 'column', gap: '1.25rem',
-                  textDecoration: 'none'
+                  textDecoration: 'none', position: 'relative',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <span className="badge" style={{ color: 'var(--text-secondary)' }}>{event.type}</span>
-                  <span className="badge badge-emerald">
-                    <div className="pulse-dot" style={{ width: '4px', height: '4px' }} />
-                    {event.stage}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="badge badge-emerald">
+                      <div className="pulse-dot" style={{ width: '4px', height: '4px' }} />
+                      {event.stage}
+                    </span>
+                    {/* Duplicate button */}
+                    <button
+                      onClick={e => { e.stopPropagation(); setDuplicatingEvent(event); }}
+                      title="Duplikasi event ini"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        padding: '0.25rem 0.5rem', borderRadius: 6,
+                        background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                        color: 'var(--text-muted)', cursor: 'pointer',
+                        fontSize: '0.7rem', fontWeight: 600,
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-blue, #00ADB5)';
+                        (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-blue, #00ADB5)';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                        (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                      }}
+                    >
+                      <Copy size={11} /> Duplikasi
+                    </button>
+                  </div>
                 </div>
                 
                 <div>
@@ -187,6 +214,14 @@ export default function WorkspaceDashboard() {
               </motion.div>
             ))}
           </div>
+        )}
+
+        {/* Duplicate Modal */}
+        {duplicatingEvent && (
+          <DuplicateEventModal
+            sourceEvent={duplicatingEvent}
+            onClose={() => setDuplicatingEvent(null)}
+          />
         )}
       </main>
     </div>

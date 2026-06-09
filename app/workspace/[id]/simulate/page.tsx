@@ -115,7 +115,7 @@ export default function SimulatePage() {
   const sc = runningResult ? severityConfig[runningResult.severity] : null;
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="flex flex-col gap-6 md:gap-8 max-w-[1200px] mx-auto p-4 md:p-8">
       {/* Header */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
@@ -131,9 +131,9 @@ export default function SimulatePage() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: '2rem' }}>
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Left panel — scenario selector */}
-        <div>
+        <div className="w-full lg:w-[400px] flex-shrink-0">
           <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden', marginBottom: '1.5rem' }}>
             <PanelHeader title="Select Scenario" icon={Activity} />
             <div style={{ padding: '1.25rem' }}>
@@ -251,7 +251,7 @@ export default function SimulatePage() {
         </div>
 
         {/* Right panel — results */}
-        <div>
+        <div className="flex-1">
           <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px', minHeight: '500px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <PanelHeader title="Simulation Output" />
             <div style={{ padding: '1.5rem', flex: 1 }}>
@@ -300,7 +300,7 @@ export default function SimulatePage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Impacted areas */}
                       <div style={{ background: 'var(--color-ground-2)', border: '1px solid var(--color-border)', padding: '1.25rem', borderRadius: '8px' }}>
                         <h4 style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Impacted Areas</h4>
@@ -388,7 +388,7 @@ export default function SimulatePage() {
                     <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
                       <button
                         className="btn-primary"
-                        onClick={() => router.push(`/workspace/${params.id}/live`)}
+                        onClick={() => router.push(`/workspace/${params.id}/execution`)}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', padding: '0.75rem 1.25rem' }}
                       >
                         <Target size={16} />

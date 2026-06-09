@@ -34,6 +34,8 @@ export interface DagTask {
   latestFinish: number;        // deadline-constrained latest completion
   delayMinutes: number;        // current delay applied to this task
   assigneeSilentMinutes: number; // minutes since last activity from assignee
+  resolutionNotes?: string;    // AI or manual resolution notes
+  attachments?: string[];      // Array of file URLs
 }
 
 export interface DivisionLoad {

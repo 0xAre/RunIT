@@ -2,61 +2,151 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { useEventStore } from '@/store/eventStore';
 import {
-  LayoutDashboard, GitBranch, Shield,
-  Target, AlertTriangle, FileText, ArrowLeft, Globe, KanbanSquare, FileBarChart, BotMessageSquare, Bot
+  LayoutDashboard, Bot, FileText, ArrowLeft, Globe,
+  KanbanSquare, FileBarChart, Shield, Loader2, Search
 } from 'lucide-react';
 import { useLangStore } from '@/store/langStore';
 import { dict } from '@/lib/i18n';
 
 /* ── Stage config ─────────────────────────────────────────────── */
 const STAGE_COLOR: Record<string, string> = {
-  blueprint:    'var(--color-stage-blueprint)',
-  dependencies: 'var(--color-stage-dependencies)',
-  'agent-pilot': 'var(--color-stage-simulate)',
-  simulate:     'var(--color-stage-simulate)',
-  live:         'var(--color-stage-live)',
-  incident:     'var(--color-stage-incident)',
-  report:       'var(--color-stage-report)',
+  overview:   'var(--color-mint)',
+  committee:  'var(--color-stage-copilot, #7C6AF5)',
+  blueprint:  'var(--color-stage-blueprint, #25D0AB)',
+  execution:  'var(--color-stage-live, #55B467)',
+  simulate:   'var(--color-stage-simulate, #FBBF24)',
+  research:   'var(--color-teal, #00ADB5)',
+  report:     'var(--color-stage-report, #A0A0A0)',
 };
 
 const STAGE_BG: Record<string, string> = {
-  blueprint:    'rgba(37,208,171,0.07)',
-  dependencies: 'rgba(132,141,255,0.07)',
-  'agent-pilot': 'rgba(124,106,245,0.07)',
-  simulate:     'rgba(251,191,36,0.07)',
-  live:         'rgba(85,180,103,0.07)',
-  incident:     'rgba(255,99,105,0.07)',
-  report:       'rgba(160,160,160,0.07)',
+  overview:   'rgba(37,208,171,0.08)',
+  committee:  'rgba(124,106,245,0.08)',
+  blueprint:  'rgba(37,208,171,0.07)',
+  execution:  'rgba(85,180,103,0.07)',
+  simulate:   'rgba(251,191,36,0.07)',
+  research:   'rgba(0,173,181,0.08)',
+  report:     'rgba(160,160,160,0.07)',
 };
 
 /* ── Layout ───────────────────────────────────────────────────── */
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { currentEvent } = useEventStore();
+  const { currentEvent, listenToEvent, saveCurrentEvent } = useEventStore();
   const { lang, toggleLang } = useLangStore();
   const t = dict[lang];
 
+  const [isLoadingEvent, setIsLoadingEvent] = useState(false);
+  const [isTranslatingData, setIsTranslatingData] = useState(false);
+  const unsubscribeRef = useRef<(() => void) | undefined>(undefined);
+
   const pathParts    = pathname.split('/');
   const workspaceId  = pathParts[2];
-  const currentPage  = pathParts[3] || 'blueprint';
+  const currentPage  = pathParts[3] || 'overview';
+
+  // ── Firestore real-time listener ──────────────────────────────
+  useEffect(() => {
+    if (!workspaceId) return;
+    setIsLoadingEvent(true);
+
+    let mounted = true;
+    listenToEvent(workspaceId).then(unsub => {
+      if (mounted) {
+        unsubscribeRef.current = unsub;
+        setIsLoadingEvent(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribeRef.current?.();
+    };
+  }, [workspaceId, listenToEvent]);
+
+  // ── Auto-save on every state change (debounced 2s) ───────────
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!currentEvent) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveCurrentEvent();
+    }, 2000);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [currentEvent, saveCurrentEvent]);
+
+  // ── Auto-translate when language changes ─────────────────────
+  useEffect(() => {
+    const handleTranslate = async () => {
+      if (!currentEvent || !currentEvent.blueprint) return;
+      // If dataLanguage is not set, we assume it was generated in the current lang initially.
+      // But if it's set and different from the UI lang, translate it!
+      if (currentEvent.dataLanguage && currentEvent.dataLanguage !== lang) {
+        setIsTranslatingData(true);
+        try {
+          const res = await fetch('/api/ai/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blueprint: currentEvent.blueprint, targetLang: lang })
+          });
+          if (res.ok) {
+            const { blueprint } = await res.json();
+            if (blueprint) {
+              useEventStore.getState().updateBlueprint(blueprint);
+              useEventStore.getState().updateEventDataLanguage(lang);
+            }
+          }
+        } catch (error) {
+          console.error("Translation failed", error);
+        } finally {
+          setIsTranslatingData(false);
+        }
+      }
+    };
+    handleTranslate();
+  }, [lang, currentEvent?.dataLanguage, currentEvent?.blueprint, currentEvent?.id]);
+
+
+
+  /* Map old/sub pages to their canonical parent */
+  const pageAliases: Record<string, string> = {
+    'agent':        'committee',
+    'agent-pilot':  'committee',
+    'tasks':        'execution',
+    'dependencies': 'execution',
+    'live':         'execution',
+    'incident':     'execution',
+    'prepare':      'execution',
+    'sponsor':      'research',
+  };
+  const canonicalPage = pageAliases[currentPage] || currentPage;
 
   const navItems = [
-    { href: 'overview',     label: t.sideOverview,     icon: LayoutDashboard },
-    { href: 'agent',        label: 'Agent Inbox',      icon: BotMessageSquare },
-    { href: 'agent-pilot',  label: 'Auto-Pilot',       icon: Bot },
-    { href: 'blueprint',    label: t.sideBlueprint,    icon: FileText },
-    { href: 'tasks',        label: t.sideTasks,        icon: KanbanSquare },
-    { href: 'dependencies', label: t.sideDependencies, icon: GitBranch },
-    { href: 'simulate',     label: t.sideSimulation,   icon: Shield },
-    { href: 'live',         label: t.sideLiveMode,     icon: Target },
-    { href: 'incident',     label: t.sideIncident,     icon: AlertTriangle },
-    { href: 'report',       label: t.sideReport,       icon: FileBarChart },
+    { href: 'overview',   label: t.sideOverview,      icon: LayoutDashboard },
+    { href: 'committee',  label: t.sideAiCommittee,   icon: Bot },
+    { href: 'blueprint',  label: t.sideBlueprint,     icon: FileText },
+    { href: 'execution',  label: 'Execution',         icon: KanbanSquare },
+    { href: 'simulate',   label: t.sideSimulation,    icon: Shield },
+    { href: 'research',   label: 'Research Hub',      icon: Search },
+    { href: 'report',     label: t.sideReport,        icon: FileBarChart },
   ];
 
-  const stageOrder   = ['blueprint', 'dependencies', 'simulate', 'live', 'incident', 'report'];
-  const currentIndex = stageOrder.indexOf(currentPage);
+  const stageOrder   = ['overview', 'committee', 'blueprint', 'execution', 'simulate', 'research', 'report'];
+  const currentIndex = stageOrder.indexOf(canonicalPage);
+
+  // ── Loading skeleton while Firestore hydrates ─────────────────
+  if (isLoadingEvent && !currentEvent) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--color-ground-0)', flexDirection: 'column', gap: '1rem' }}>
+        <Loader2 size={28} color="var(--color-mint)" style={{ animation: 'spin 1.2s linear infinite' }} />
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Memuat workspace…</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -129,15 +219,16 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               padding: '2px 8px', borderRadius: '12px',
-              background: `${STAGE_COLOR[currentEvent.stage?.toLowerCase() || 'blueprint']}15`,
-              border: `1px solid ${STAGE_COLOR[currentEvent.stage?.toLowerCase() || 'blueprint']}30`,
-              fontSize: '0.7rem', fontWeight: 500, color: STAGE_COLOR[currentEvent.stage?.toLowerCase() || 'blueprint']
+              background: `${STAGE_COLOR[canonicalPage] || 'var(--color-mint)'}15`,
+              border: `1px solid ${STAGE_COLOR[canonicalPage] || 'var(--color-mint)'}30`,
+              fontSize: '0.7rem', fontWeight: 500,
+              color: STAGE_COLOR[canonicalPage] || 'var(--color-mint)'
             }}>
               <span className="pulse-dot" style={{
-                color: STAGE_COLOR[currentEvent.stage?.toLowerCase() || 'blueprint'],
+                color: STAGE_COLOR[canonicalPage] || 'var(--color-mint)',
                 width: 6, height: 6,
               }} />
-              {currentEvent.stage}
+              {navItems.find(i => i.href === canonicalPage)?.label || currentEvent.stage}
             </div>
           </div>
         )}
@@ -154,13 +245,13 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             padding: 'var(--space-xs) var(--space-sm)',
             marginBottom: 'var(--space-xs)',
           }}>
-            {t.sideOverview}
+            WORKFLOW
           </div>
 
           {navItems.map((item, i) => {
-            const isActive    = currentPage === item.href;
+            const isActive    = canonicalPage === item.href;
             const isCompleted = i < currentIndex;
-            const isDisabled  = !currentEvent && item.href !== 'blueprint';
+            const isDisabled  = !currentEvent && !['overview'].includes(item.href);
             const stageColor  = STAGE_COLOR[item.href] || 'var(--color-text-muted)';
 
             return (
@@ -246,9 +337,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
               <span style={{
                 fontSize: '0.9rem',
                 fontWeight: 600,
-                color: STAGE_COLOR[currentPage] || 'var(--color-text-primary)',
+                color: STAGE_COLOR[canonicalPage] || 'var(--color-text-primary)',
               }}>
-                {navItems.find(i => i.href === currentPage)?.label || 'Workspace'}
+                {navItems.find(i => i.href === canonicalPage)?.label || 'Workspace'}
               </span>
             </div>
 
@@ -259,7 +350,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
               overflowX: 'auto',
             }}>
               {stageOrder.map((stage, i) => {
-                const isActive = stage === currentPage;
+                const isActive = stage === canonicalPage;
                 const isPast   = i < currentIndex;
                 const stageLabel = navItems.find(item => item.href === stage)?.label || stage;
 
@@ -295,11 +386,11 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '4px 10px', borderRadius: '16px',
-                background: `${STAGE_COLOR[currentPage] || 'var(--color-mint)'}15`,
-                border: `1px solid ${STAGE_COLOR[currentPage] || 'var(--color-mint)'}30`,
-                fontSize: '0.75rem', fontWeight: 500, color: STAGE_COLOR[currentPage] || 'var(--color-mint)'
-              }}>
-                <span className="pulse-dot" style={{ color: STAGE_COLOR[currentPage], width: 6, height: 6, borderRadius: '50%' }} />
+                  background: `${STAGE_COLOR[canonicalPage] || 'var(--color-mint)'}15`,
+                  border: `1px solid ${STAGE_COLOR[canonicalPage] || 'var(--color-mint)'}30`,
+                  fontSize: '0.75rem', fontWeight: 500, color: STAGE_COLOR[canonicalPage] || 'var(--color-mint)'
+                }}>
+                <span className="pulse-dot" style={{ color: STAGE_COLOR[canonicalPage], width: 6, height: 6, borderRadius: '50%' }} />
                 {t.sideSystemConnected}
               </div>
             </div>
@@ -307,7 +398,23 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Page content */}
-        <div style={{ flex: 1, minHeight: 0 }}>
+        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          {isTranslatingData && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(4px)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              zIndex: 50, borderRadius: '8px'
+            }}>
+              <Loader2 size={32} color="var(--color-mint)" style={{ animation: 'spin 1.5s linear infinite', marginBottom: '1rem' }} />
+              <p style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontSize: '1.1rem' }}>
+                Translating Master Plan...
+              </p>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                Applying AI translation to match {lang.toUpperCase()} interface.
+              </p>
+            </div>
+          )}
           {children}
         </div>
       </main>

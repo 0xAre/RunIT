@@ -1,287 +1,356 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useEventStore } from '@/store/eventStore';
 import {
-  FileText, Download, Loader2, Zap, CheckCircle, 
-  BarChart3, Users, DollarSign, Terminal, Activity
+  FileText, Download, Loader2, Zap, CheckCircle,
+  BarChart3, Users, DollarSign, Activity, Send,
+  ClipboardCheck, BookOpen, Save, Copy, Printer,
 } from 'lucide-react';
+import type { ThankYouMessages, ReconciliationReport, EventTemplate } from '@/lib/post-event';
 
-const mockReport = `# Post-Event Intelligence Report
+type PostEventModule = 'report' | 'sponsor-report' | 'survey' | 'thank-you' | 'reconciliation' | 'lessons' | 'template';
 
-## 1. Executive Summary
+interface PostEventResults {
+  report?: string;
+  sponsorReport?: string;
+  survey?: { title: string; questions: Array<{ id: string; text: string; type: string; choices?: string[] }> };
+  thankYou?: ThankYouMessages;
+  reconciliation?: ReconciliationReport;
+  lessons?: { summary: string; strengths: string[]; improvements: string[]; actionItems: string[] };
+  template?: EventTemplate;
+}
 
-Event telah berhasil dilaksanakan dengan tingkat keberhasilan yang memuaskan. Seluruh rangkaian acara berjalan sesuai dengan rencana operasional yang telah disusun, dengan beberapa penyesuaian minor yang ditangani secara profesional oleh tim panitia.
-
-## 2. Pencapaian Tujuan
-
-### Tujuan Utama
-- ✅ **Target Peserta**: Tercapai — peserta hadir memenuhi kapasitas venue
-- ✅ **Kualitas Konten**: Semua sesi berjalan dengan pembicara yang kompeten dan relevan  
-- ✅ **Kepuasan Peserta**: Feedback positif dari mayoritas peserta
-- ⚠️ **Coverage Media**: Partially achieved — 3 dari 5 media partner hadir
-
-### Capaian Operasional
-- Seluruh rundown terlaksana dalam koridor waktu yang telah ditetapkan
-- Koordinasi antar divisi berjalan dengan baik berkat sistem briefing rutin
-- Handling insiden minor diselesaikan tanpa mengganggu jalannya acara
-
-## 3. Realisasi Anggaran
-
-| Pos Anggaran | Alokasi | Realisasi | Selisih |
-|---|---|---|---|
-| Venue & Fasilitas | Rp 15.000.000 | Rp 14.500.000 | +Rp 500.000 |
-| Konsumsi | Rp 10.000.000 | Rp 10.800.000 | -Rp 800.000 |
-| Publikasi | Rp 7.500.000 | Rp 6.900.000 | +Rp 600.000 |
-| Pembicara & Talent | Rp 10.000.000 | Rp 10.000.000 | Rp 0 |
-| Perlengkapan | Rp 5.000.000 | Rp 4.750.000 | +Rp 250.000 |
-| Dokumentasi | Rp 2.500.000 | Rp 2.500.000 | Rp 0 |
-| **TOTAL** | **Rp 50.000.000** | **Rp 49.450.000** | **+Rp 550.000** |
-
-**Catatan**: Terdapat efisiensi anggaran sebesar Rp 550.000 (1.1%) dari total budget yang direncanakan.
-
-## 4. Evaluasi Pelaksanaan
-
-### Yang Berjalan Baik
-- Sistem registrasi digital berjalan lancar dan efisien
-- Koordinasi real-time antar divisi sangat efektif
-- Tim dokumentasi menghasilkan konten berkualitas tinggi
-- Keamanan dan kenyamanan peserta terjaga sepanjang acara
-- Penanganan insiden teknis cepat dan profesional
-
-### Area yang Perlu Ditingkatkan
-- Catering sempat terlambat 20 menit — perlu konfirmasi lebih awal
-- Parkir tidak memadai untuk jumlah peserta — perlu solusi shuttle
-- Beberapa signage kurang jelas — perlu improvement desain
-
-## 5. Lessons Learned
-
-1. **Konfirmasi vendor H-3, bukan H-1** — Terutama untuk catering dan AV
-2. **Backup speaker wajib dikonfirmasi sejak awal** — Tidak cukup hanya contact saat darurat
-3. **War room koordinasi sangat membantu** — Single room untuk semua PIC divisi
-4. **Rundown digital real-time lebih efektif** — Dibanding printed rundown yang sulit diupdate
-5. **Briefing harian H-7 sampai H-Day** — Membuat semua orang aligned
-
-## 6. Rekomendasi untuk Event Berikutnya
-
-### Short-term (Segera)
-- Dokumentasikan semua SOP yang berhasil untuk dijadikan template
-- Buat database vendor yang terpercaya dan sudah teruji
-- Simpan template koordinasi untuk event serupa berikutnya
-
-### Long-term (Strategis)
-- Investasikan dalam sistem manajemen event digital yang terintegrasi
-- Bangun roster volunteer tetap yang terlatih
-- Kembangkan network pembicara untuk kemudahan booking masa depan
-- Pertimbangkan asuransi event untuk mitigasi risiko finansial
-
----
-
-*Laporan ini dibuat secara otomatis oleh RunIt AI Post-Event Intelligence System.*
-*Digenerate pada: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}*
-`;
+const MODULE_LABELS: Record<PostEventModule, { label: string; icon: typeof FileText; desc: string }> = {
+  report: { label: 'LPJ Utama', icon: FileText, desc: 'Executive report with OCS, bottlenecks, recommendations' },
+  'sponsor-report': { label: 'Laporan Sponsor', icon: BarChart3, desc: 'Sponsor visibility + audience reach report' },
+  survey: { label: 'Survey Peserta', icon: ClipboardCheck, desc: 'Post-event survey questions auto-generated' },
+  'thank-you': { label: 'Pesan Terima Kasih', icon: Send, desc: 'Thank-you messages for sponsors, speakers, vendors, team' },
+  reconciliation: { label: 'Rekonsiliasi Keuangan', icon: DollarSign, desc: 'Budget vs actual with variance analysis' },
+  lessons: { label: 'Lessons Learned', icon: BookOpen, desc: 'What went well, what to improve, action items' },
+  template: { label: 'Event Template', icon: Save, desc: 'Reusable blueprint for next similar event' },
+};
 
 export default function ReportPage() {
   const params = useParams();
-  const { currentEvent, updateReport } = useEventStore();
-  const [report, setReport] = useState<string | null>(currentEvent?.report || null);
-  const [isLoading, setIsLoading] = useState(false);
+  const currentEvent = useEventStore(s => s.currentEvent);
 
-  const generateReport = async () => {
+  const [generating, setGenerating] = useState(false);
+  const [generatedCount, setGeneratedCount] = useState(0);
+  const [results, setResults] = useState<PostEventResults | null>(
+    currentEvent?.reportModules as PostEventResults || null
+  );
+  const [activeView, setActiveView] = useState<PostEventModule | null>(
+    currentEvent?.reportModules ? (Object.keys(currentEvent.reportModules)[0] as PostEventModule) : null
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentEvent?.reportModules && !results) {
+      setResults(currentEvent.reportModules as PostEventResults);
+      setGeneratedCount(Object.keys(currentEvent.reportModules).length);
+    }
+  }, [currentEvent?.id]);
+
+  const handleGenerateAll = async () => {
     if (!currentEvent) return;
-    setIsLoading(true);
+    setGenerating(true);
+    setError(null);
+    try {
+      const allModules: PostEventModule[] = ['report', 'sponsor-report', 'survey', 'thank-you', 'lessons', 'template'];
+      if (currentEvent.budgetTracker) allModules.push('reconciliation');
 
+      const res = await fetch('/api/ai/generate-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventData: currentEvent, modules: allModules }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      setResults(data.modules);
+      setGeneratedCount(Object.keys(data.modules).length);
+      useEventStore.getState().saveReportModules(data.modules);
+      setActiveView('report');
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleGenerateSingle = async (module: PostEventModule) => {
+    if (!currentEvent) return;
+    setGenerating(true);
+    setError(null);
     try {
       const res = await fetch('/api/ai/generate-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventData: currentEvent }),
+        body: JSON.stringify({ eventData: currentEvent, modules: [module] }),
       });
+      if (!res.ok) throw new Error('Failed');
       const data = await res.json();
-      if (res.ok && data.report) {
-        setReport(data.report);
-        updateReport(data.report);
-      } else {
-        setReport(mockReport); // Fallback if API fails
-      }
-    } catch {
-      setReport(mockReport);
+      const merged = { ...results, ...data.modules };
+      setResults(merged);
+      useEventStore.getState().saveReportModules(merged);
+      setGeneratedCount(prev => prev + 1);
+      setActiveView(module);
+    } catch (e: any) {
+      setError(e.message);
     } finally {
-      setIsLoading(false);
+      setGenerating(false);
     }
   };
 
-  const downloadReport = () => {
-    if (!report) return;
-    const blob = new Blob([report], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `LPJ_${currentEvent?.name?.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
 
-  const stats = [
-    { icon: Users, label: 'DAG Tasks', value: `${currentEvent?.execution?.dagTasks.length || 0}` },
-    { icon: Zap, label: 'Crises Injected', value: `${currentEvent?.execution?.activeIncident ? 1 : 0}` },
-    { icon: Activity, label: 'Final OCS Score', value: `${currentEvent?.execution?.ocs.score || '—'}/100` },
-    { icon: Terminal, label: 'Timeline Extension', value: `+${currentEvent?.execution?.timelineExtensionMinutes || 0}m` },
-  ];
+  const simpleMd = (md: string) => md
+    .replace(/^### (.+)$/gm, '<h4 style="margin-top:1rem;margin-bottom:0.3rem;font-size:0.95rem;font-weight:700;color:var(--color-text-primary)">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="margin-top:1.25rem;margin-bottom:0.4rem;font-size:1.1rem;font-weight:700;color:var(--color-text-primary)">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2 style="margin-bottom:0.5rem;font-size:1.25rem;font-weight:700;color:var(--color-text-primary)">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
 
-  const renderMarkdown = (text: string) => {
-    return text
-      .replace(/^# (.+)$/gm, '<h1 style="font-family:var(--font-heading);font-size:1.75rem;color:var(--color-text-primary);margin:2rem 0 1rem;letter-spacing:-0.01em;font-weight:700">$1</h1>')
-      .replace(/^## (.+)$/gm, '<h2 style="font-family:var(--font-heading);font-size:1.25rem;color:var(--color-mint);margin:2rem 0 0.75rem;font-weight:600;border-bottom:1px solid var(--color-border);padding-bottom:0.5rem">$1</h2>')
-      .replace(/^### (.+)$/gm, '<h3 style="font-family:var(--font-heading);font-size:1rem;color:var(--color-text-primary);margin:1.5rem 0 0.5rem;font-weight:600">$1</h3>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--color-text-primary);font-weight:600">$1</strong>')
-      .replace(/^- ✅ (.+)$/gm, '<div style="display:flex;gap:0.75rem;margin:0.375rem 0;align-items:flex-start"><div style="color:var(--color-mint);flex-shrink:0;margin-top:2px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div><span style="font-size:0.9rem;color:var(--color-text-secondary);line-height:1.5">$1</span></div>')
-      .replace(/^- ⚠️ (.+)$/gm, '<div style="display:flex;gap:0.75rem;margin:0.375rem 0;align-items:flex-start"><div style="color:var(--color-amber);flex-shrink:0;margin-top:2px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div><span style="font-size:0.9rem;color:var(--color-text-secondary);line-height:1.5">$1</span></div>')
-      .replace(/^- (.+)$/gm, '<div style="display:flex;gap:0.75rem;margin:0.375rem 0;align-items:flex-start"><div style="color:var(--color-mint);flex-shrink:0;margin-top:6px;width:5px;height:5px;border-radius:50%;background:currentColor"></div><span style="font-size:0.9rem;color:var(--color-text-secondary);line-height:1.5">$1</span></div>')
-      .replace(/^\d+\. (.+)$/gm, (_, content) => `<div style="display:flex;gap:0.75rem;margin:0.375rem 0"><div style="color:var(--color-mint);font-size:0.85rem;font-weight:600;flex-shrink:0;margin-top:1px">*</div><span style="font-size:0.9rem;color:var(--color-text-secondary);line-height:1.5">${content}</span></div>`)
-      .replace(/\|(.+)\|/g, (match) => {
-        const cells = match.split('|').filter(c => c.trim());
-        const isHeader = !match.includes('---');
-        const cellStyle = isHeader
-          ? 'padding:1rem;font-size:0.85rem;font-weight:600;color:var(--color-text-primary);border-bottom:1px solid var(--color-border);background:var(--color-ground-2);text-align:left'
-          : 'padding:1rem;font-size:0.85rem;color:var(--color-text-secondary);border-bottom:1px solid var(--color-border)';
-        return `<tr>${cells.map(c => `<td style="${cellStyle}">${c.trim()}</td>`).join('')}</tr>`;
-      })
-      .replace(/(<tr>[\s\S]+?<\/tr>)/g, (_, rows) => `<div style="overflow-x:auto;margin:1.5rem 0"><table style="width:100%;border-collapse:collapse;background:var(--color-ground-0);border:1px solid var(--color-border);border-radius:8px;overflow:hidden">${rows}</table></div>`)
-      .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--color-border);margin:2.5rem 0">')
-      .replace(/^\*(.+)\*$/gm, '<p style="font-size:0.8rem;color:var(--color-text-muted);font-style:italic;margin:0.25rem 0;text-align:center">$1</p>')
-      .replace(/\n\n/g, '<div style="margin:0.75rem 0"></div>');
-  };
+  if (!currentEvent) {
+    return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Event tidak ditemukan.</div>;
+  }
+
+  const completed = currentEvent.blueprint?.divisions.flatMap(d => d.tasks).filter(t => t.status === 'done').length || 0;
+  const total = currentEvent.blueprint?.divisions.flatMap(d => d.tasks).length || 0;
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <div style={{ padding: '0.5rem', background: 'rgba(37, 208, 171, 0.1)', borderRadius: '8px' }}>
-              <FileText size={20} color="var(--color-mint)" />
-            </div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
-              Post-Event Intelligence
-            </h1>
-          </div>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', maxWidth: '600px' }}>
-            Generate a comprehensive AI-powered execution report and lessons learned document.
-          </p>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <Activity size={22} color="#25D0AB" />
+          <h1 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>Post-Event Intelligence Hub</h1>
         </div>
-        {report && (
-          <button
-            className="btn-ghost"
-            onClick={downloadReport}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, fontSize: '0.85rem' }}
-          >
-            <Download size={16} />
-            Download MD
-          </button>
-        )}
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>
+          {currentEvent.name} · {completed}/{total} tasks completed · Generate all post-event deliverables in one click
+        </p>
       </div>
 
-      {/* Stats overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
-        {stats.map(stat => (
-          <div key={stat.label} style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', padding: '1.5rem', borderRadius: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              <stat.icon size={14} color="var(--color-text-muted)" />
-              <p style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</p>
-            </div>
-            <p style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {!report && !isLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ position: 'relative', marginTop: '1rem' }}
-        >
-          <div style={{
-            background: 'var(--color-ground-1)', border: '1px solid var(--color-mint)', borderRadius: '12px',
-            padding: '4rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', textAlign: 'center',
-            boxShadow: '0 4px 30px rgba(37, 208, 171, 0.05)'
-          }}>
-            <div style={{ padding: '1rem', background: 'rgba(37, 208, 171, 0.1)', borderRadius: '50%' }}>
-              <FileText size={40} color="var(--color-mint)" />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-                Compile Intelligence Report
-              </h2>
-              <p style={{ color: 'var(--color-text-secondary)', maxWidth: '450px', lineHeight: 1.6, fontSize: '0.9rem' }}>
-                System will parse the operational blueprint, simulations, and live logs to synthesize a comprehensive evaluation report.
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-              {['Executive Summary', 'Budget Audit', 'Evaluation', 'Lessons Learned'].map(item => (
-                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CheckCircle size={14} color="var(--color-mint)" />
-                  <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>{item}</span>
-                </div>
-              ))}
-            </div>
+      {/* Module grid + actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" style={{ marginBottom: '1.5rem' }}>
+        {Object.entries(MODULE_LABELS).map(([key, mod]) => {
+          const mk = key as PostEventModule;
+          const isGenerated = results && mk in results;
+          return (
             <button
-              className="btn-primary"
-              onClick={generateReport}
+              key={mk}
+              onClick={() => isGenerated ? setActiveView(mk) : handleGenerateSingle(mk)}
+              disabled={generating}
               style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '1rem 2rem', fontSize: '0.95rem', fontWeight: 600, marginTop: '1rem',
-                borderRadius: '8px'
+                padding: '1rem', borderRadius: 10, border: `1px solid ${isGenerated ? '#25D0AB' : 'var(--color-border)'}`,
+                background: isGenerated ? 'rgba(37,208,171,0.06)' : 'var(--color-ground-1)',
+                cursor: generating ? 'not-allowed' : 'pointer', textAlign: 'left',
+                display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+                opacity: generating ? 0.6 : 1, transition: 'all 0.15s',
               }}
             >
-              <FileText size={18} fill="currentColor" />
-              Generate AI Report
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: isGenerated ? 'rgba(37,208,171,0.15)' : 'var(--color-ground-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <mod.icon size={15} color={isGenerated ? '#25D0AB' : 'var(--color-text-muted)'} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.15rem' }}>
+                  {mod.label} {isGenerated && <CheckCircle size={12} color="#25D0AB" style={{ display: 'inline', marginLeft: '0.3rem', verticalAlign: 'middle' }} />}
+                </p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>{mod.desc}</p>
+              </div>
             </button>
-          </div>
-        </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Generate All button */}
+      {!results && (
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <button
+            onClick={handleGenerateAll}
+            disabled={generating}
+            style={{
+              padding: '0.75rem 2rem', borderRadius: 10, border: 'none', cursor: generating ? 'not-allowed' : 'pointer',
+              background: generating ? 'var(--color-ground-2)' : 'linear-gradient(135deg, #25D0AB, #00ADB5)',
+              color: generating ? 'var(--color-text-muted)' : '#000', fontSize: '0.9rem', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem', opacity: generating ? 0.6 : 1,
+            }}
+          >
+            {generating ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating {generatedCount}/7...</> : <><Zap size={15} /> Generate All Post-Event Deliverables</>}
+          </button>
+          {error && <p style={{ color: '#FF6369', fontSize: '0.8rem', marginTop: '0.5rem' }}>{error}</p>}
+        </div>
       )}
 
-      {isLoading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{
-            background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '12px',
-            padding: '5rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', textAlign: 'center'
-          }}
-        >
-          <Loader2 size={40} color="var(--color-teal)" style={{ animation: 'spin 1.5s linear infinite' }} />
-          <div>
-            <p style={{ color: 'var(--color-text-primary)', fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>Compiling Report</p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>Analyzing event telemetry and live logs...</p>
-          </div>
-        </motion.div>
-      )}
-
-      {report && !isLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ position: 'relative' }}
-        >
-          <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '3.5rem 4rem' }}>
-            <div
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(report) }}
-              style={{ lineHeight: 1.7 }}
-            />
-            <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border)', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button className="btn-ghost" onClick={() => setReport(null)} style={{ padding: '0.75rem 1.25rem', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 500 }}>
-                Regenerate
+      {/* Content viewer */}
+      {activeView && results && (
+        <div className="print-area" style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '1.5rem', position: 'relative' }}>
+          <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              {MODULE_LABELS[activeView].label}
+            </h3>
+            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+              <button
+                onClick={() => window.print()}
+                style={{
+                  padding: '0.35rem 0.65rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600,
+                  background: 'rgba(0,173,181,0.1)', border: '1px solid #00ADB5', color: '#00ADB5',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem',
+                }}
+              >
+                <Printer size={12} /> Print / PDF
               </button>
-              <button className="btn-primary" onClick={downloadReport} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 600 }}>
-                <Download size={16} fill="currentColor" />
-                Download Document
-              </button>
+              {Object.keys(results).map(mk => (
+                <button key={mk}
+                  onClick={() => setActiveView(mk as PostEventModule)}
+                  style={{
+                    padding: '0.25rem 0.55rem', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600,
+                    background: activeView === mk ? 'rgba(37,208,171,0.12)' : 'var(--color-ground-2)',
+                    border: `1px solid ${activeView === mk ? '#25D0AB' : 'var(--color-border)'}`,
+                    color: activeView === mk ? '#25D0AB' : 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {MODULE_LABELS[mk as PostEventModule].label}
+                </button>
+              ))}
             </div>
           </div>
-        </motion.div>
+
+          <div className="print-section" style={{ color: 'var(--color-text-primary)', lineHeight: 1.7, fontSize: '0.85rem' }}>
+            {/* LPJ Main Report */}
+            {activeView === 'report' && results.report && (
+              <div>
+                <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.4rem' }}>
+                  <button onClick={() => handleCopy(results.report!)} style={{ padding: '0.3rem 0.6rem', borderRadius: 5, background: 'var(--color-ground-2)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Copy size={11} /> Copy</button>
+                </div>
+                <div dangerouslySetInnerHTML={{ __html: simpleMd(results.report) }} />
+              </div>
+            )}
+
+            {/* Sponsor Report */}
+            {activeView === 'sponsor-report' && results.sponsorReport && (
+              <div>
+                <button onClick={() => handleCopy(results.sponsorReport!)} style={{ padding: '0.3rem 0.6rem', borderRadius: 5, background: 'var(--color-ground-2)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.75rem' }}><Copy size={11} /> Copy</button>
+                <div dangerouslySetInnerHTML={{ __html: simpleMd(results.sponsorReport) }} />
+              </div>
+            )}
+
+            {/* Survey */}
+            {activeView === 'survey' && results.survey && (
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>{results.survey.title}</h3>
+                {results.survey.questions.map((q, i) => (
+                  <div key={q.id} style={{ padding: '0.6rem', marginBottom: '0.5rem', background: 'var(--color-ground-2)', borderRadius: 6, border: '1px solid var(--color-border)' }}>
+                    <p style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.3rem' }}>{i + 1}. {q.text}</p>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', background: 'var(--color-ground-0)', padding: '0.1rem 0.4rem', borderRadius: 10 }}>{q.type}</span>
+                  </div>
+                ))}
+                <button onClick={() => handleCopy(JSON.stringify(results.survey, null, 2))} style={{ padding: '0.3rem 0.6rem', borderRadius: 5, background: 'var(--color-ground-2)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem' }}><Copy size={11} /> Copy JSON</button>
+              </div>
+            )}
+
+            {/* Thank-You Messages */}
+            {activeView === 'thank-you' && results.thankYou && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {Object.entries(results.thankYou).map(([key, msg]) => (
+                  <div key={key} style={{ padding: '0.875rem', background: 'var(--color-ground-2)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#7C6AF5' }}>{key}</span>
+                      <div style={{ display: 'flex', gap: '0.3rem' }}>
+                        <a href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer" style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 8, background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', color: '#25D366', textDecoration: 'none' }}>WA</a>
+                        <button onClick={() => handleCopy(msg)} style={{ fontSize: '0.62rem', padding: '0.15rem 0.4rem', borderRadius: 8, background: 'var(--color-ground-0)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer' }}><Copy size={9} /></button>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'var(--color-text-primary)' }}>{msg}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Reconciliation */}
+            {activeView === 'reconciliation' && results.reconciliation && (
+              <div>
+                <p style={{ marginBottom: '0.75rem', color: 'var(--color-text-secondary)' }}>{results.reconciliation.summary}</p>
+                {results.reconciliation.categories.map(c => (
+                  <div key={c.label} style={{ padding: '0.6rem', marginBottom: '0.4rem', background: 'var(--color-ground-2)', borderRadius: 6, border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.82rem', width: 120 }}>{c.label}</span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>Rp {c.estimated.toLocaleString('id-ID')} → Rp {c.actual.toLocaleString('id-ID')}</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: c.variancePct > 10 ? '#FF6369' : c.variancePct < -10 ? '#25D0AB' : '#FBBF24', marginLeft: 'auto' }}>
+                      {c.variancePct > 0 ? '+' : ''}{c.variancePct}%
+                    </span>
+                  </div>
+                ))}
+                {results.reconciliation.recommendations.length > 0 && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <p style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.3rem' }}>Recommendations:</p>
+                    {results.reconciliation.recommendations.map((r, i) => (
+                      <p key={i} style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>• {r}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Lessons */}
+            {activeView === 'lessons' && results.lessons && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>{results.lessons.summary}</p>
+                <div style={{ background: 'rgba(37,208,171,0.06)', border: '1px solid rgba(37,208,171,0.2)', borderRadius: 8, padding: '0.875rem' }}>
+                  <p style={{ fontWeight: 700, color: '#25D0AB', fontSize: '0.78rem', marginBottom: '0.5rem' }}>Strengths</p>
+                  {results.lessons.strengths.map((s, i) => <p key={i} style={{ fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>• {s}</p>)}
+                </div>
+                <div style={{ background: 'rgba(255,99,105,0.06)', border: '1px solid rgba(255,99,105,0.2)', borderRadius: 8, padding: '0.875rem' }}>
+                  <p style={{ fontWeight: 700, color: '#FF6369', fontSize: '0.78rem', marginBottom: '0.5rem' }}>Improvements</p>
+                  {results.lessons.improvements.map((s, i) => <p key={i} style={{ fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>• {s}</p>)}
+                </div>
+                <div style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 8, padding: '0.875rem' }}>
+                  <p style={{ fontWeight: 700, color: '#FBBF24', fontSize: '0.78rem', marginBottom: '0.5rem' }}>Action Items</p>
+                  {results.lessons.actionItems.map((s, i) => <p key={i} style={{ fontSize: '0.82rem', color: 'var(--color-text-primary)' }}>• {s}</p>)}
+                </div>
+              </div>
+            )}
+
+            {/* Template */}
+            {activeView === 'template' && results.template && (
+              <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--color-ground-2)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Event Type</p>
+                    <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>{results.template.type} · {results.template.scale} · {results.template.audience}</p>
+                  </div>
+                  {results.template.divisionStructures.map((div, i) => (
+                    <div key={i} style={{ padding: '0.75rem', background: 'var(--color-ground-2)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: '0.3rem' }}>{div.name} <span style={{ fontWeight: 400, fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>PIC: {div.pic}</span></p>
+                      {div.keyTasks.map((t, j) => <p key={j} style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>• {t}</p>)}
+                    </div>
+                  ))}
+                  {results.template.keyVendors.length > 0 && (
+                    <div style={{ padding: '0.75rem', background: 'var(--color-ground-2)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: '0.3rem' }}>Key Vendors</p>
+                      {results.template.keyVendors.map(v => <p key={v} style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>• {v}</p>)}
+                    </div>
+                  )}
+                  <button onClick={() => {
+                    const json = JSON.stringify(results.template, null, 2);
+                    handleCopy(json);
+                  }} style={{ padding: '0.5rem', borderRadius: 6, background: 'rgba(37,208,171,0.1)', border: '1px solid #25D0AB', color: '#25D0AB', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700 }}>
+                    <Save size={12} style={{ display: 'inline', marginRight: '0.3rem' }} /> Copy as JSON (Reusable)
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {generating && (
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { searchYouCom, deepResearch } from '@/lib/you';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -14,7 +15,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    // Call You.com API for additional context
+    let webContext = "";
+    try {
+      const searchHits = await searchYouCom(prompt, { count: 3 });
+      if (searchHits && searchHits.length > 0) {
+        webContext = "Konteks referensi web (dari You.com):\n" + searchHits.map(h => `- ${h.title}: ${h.snippets?.[0] || ''}`).join("\n");
+      }
+    } catch (youErr) {
+      console.warn('[Parse Brief] You.com search failed, continuing without web context:', youErr);
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const systemPrompt = `Kamu adalah AI event brief parser untuk aplikasi RunIT.
 Tugasmu adalah mengekstrak dan menginferensi informasi event dari deskripsi natural pengguna.
@@ -42,10 +54,33 @@ Inferensi secara cerdas dari konteks. Contoh:
 Kembalikan HANYA JSON tanpa markdown. Pastikan valid JSON.
 
 Input pengguna:
-"${prompt.replace(/"/g, '\\"')}"`;
+"${prompt.replace(/"/g, '\\"')}"
 
-    const result = await model.generateContent(systemPrompt);
-    const text = result.response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+${webContext}
+`;
+
+    let text = '';
+    let usedEngine = '';
+    
+    try {
+      console.log('[Parse Brief] Trying Gemini as primary engine...');
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const result = await model.generateContent(systemPrompt);
+      text = result.response.text();
+      usedEngine = 'gemini';
+    } catch (geminiErr) {
+      console.warn('[Parse Brief] Gemini failed (possibly 503), falling back to You.com:', geminiErr);
+      const youRes = await deepResearch(systemPrompt, 'lite');
+      if (youRes && youRes.content) {
+        text = youRes.content;
+        usedEngine = 'you.com';
+      } else {
+        throw new Error('Both Gemini and You.com failed to generate content');
+      }
+    }
+
+    text = text.replace(/```json\n?/ig, '').replace(/```\n?/g, '').trim();
+    console.log(`[Parse Brief] Success using ${usedEngine}`);
 
     let parsed;
     try {

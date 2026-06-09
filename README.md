@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RunIT
 
-## Getting Started
+AI operational intelligence for event execution — from brief to blueprint, simulation, live ops, and post-event reporting.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router)
+- **Firebase** — Auth, Firestore, Storage, Hosting (Cloud Functions backend)
+- **Gemini API** — `@google/generative-ai` (blueprint, agents, task resolution, reports)
+- **You.com** — optional web research layer (`YOU_API_KEY`)
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local   # if you maintain one locally
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Required environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Purpose |
+|----------|---------|
+| `GEMINI_API_KEY` | Gemini API for all AI routes |
+| `NEXT_PUBLIC_FIREBASE_*` | Firebase client config |
+| `YOU_API_KEY` | Optional — web sourcing / research fallback |
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/                 # Next.js routes & API handlers
+  api/ai/            # Gemini-powered AI endpoints
+  api/search/        # Maps & places
+  api/dag/           # Dependency graph propagation
+  workspace/         # Authenticated event workspace
+  auth/              # Sign in / sign up
+components/          # Shared React components
+hooks/               # React hooks (auth, etc.)
+lib/                 # Server/client utilities (gemini, you, dag-engine, firebase)
+store/               # Zustand stores (events, i18n)
+public/              # Static assets
+docs/                # Product docs, pitch script, changelog
+scripts/             # Local tooling (pitch simulation, voiceover, scratch tests)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | ESLint |
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Firebase Hosting (asia-southeast2):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+firebase deploy --only hosting,firestore:rules
+```
+
+## Documentation
+
+- [Product blueprint](docs/runit_ai_event_execution_system_blueprint.md)
+- [V2 changelog](docs/RUNIT_V2_CHANGELOG.md)
+- [Pitch video script](docs/PITCHING_SCRIPT.md)

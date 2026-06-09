@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Letter R with play button cutout -->
+  <path d="
+    M18 12
+    L18 88
+    L32 88
+    L32 60
+    L44 60
+    L62 88
+    L78 88
+    L58 58
+    C68 54 74 46 74 36
+    C74 22 64 12 50 12
+    Z
+    M32 24
+    L50 24
+    C56 24 62 29 62 36
+    C62 43 56 48 50 48
+    L32 48
+    Z
+  " fill="white"/>
+  <!-- Play triangle cutout (negative space effect via overlay) -->
+  <path d="M36 32 L54 42 L36 52 Z" fill="black"/>
+</svg>

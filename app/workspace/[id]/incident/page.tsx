@@ -5,13 +5,20 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEventStore } from '@/store/eventStore';
 import {
-  AlertTriangle, Zap, CheckCircle, Loader2, Clock, Users, ShieldAlert, FileText, Activity
+  AlertTriangle, Zap, CheckCircle, Loader2, Clock, Users, ShieldAlert, FileText, Activity, Globe
 } from 'lucide-react';
 
 interface IncidentResponse {
   immediateActions: string[];
   affectedDivisions: string[];
   recommendation: string;
+}
+
+interface IndustrySOP {
+  title: string;
+  url: string;
+  snippet?: string;
+  favicon?: string;
 }
 
 const incidentTypes = [
@@ -42,6 +49,7 @@ export default function IncidentPage() {
   const [incident, setIncident] = useState('');
   const [response, setResponse] = useState<IncidentResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [industrySOP, setIndustrySOP] = useState<IndustrySOP[]>([]);
   const [history, setHistory] = useState<{ incident: string; response: IncidentResponse; time: string }[]>([]);
 
   const handleIncident = async () => {
@@ -58,6 +66,7 @@ export default function IncidentPage() {
       const data = await res.json();
       if (data.response) {
         setResponse(data.response);
+        setIndustrySOP(data.industrySOP ?? []);
         setHistory(prev => [{ incident, response: data.response, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) }, ...prev]);
       }
     } catch {
@@ -79,7 +88,7 @@ export default function IncidentPage() {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div className="flex flex-col gap-6 md:gap-8 max-w-[1200px] mx-auto p-4 md:p-8">
       {/* Header */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
@@ -95,9 +104,9 @@ export default function IncidentPage() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: '2rem' }}>
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Left — Input */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="flex flex-col gap-6 w-full lg:w-[400px] flex-shrink-0">
           {/* Quick incident templates */}
           <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden' }}>
             <PanelHeader title="Quick Templates" icon={FileText} />
@@ -200,7 +209,7 @@ export default function IncidentPage() {
         </div>
 
         {/* Right — Response */}
-        <div>
+        <div className="flex-1">
           <div style={{ background: 'var(--color-ground-1)', border: '1px solid var(--color-border)', borderRadius: '10px', height: '100%', minHeight: '500px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <PanelHeader title="AI Response Protocol" icon={ShieldAlert} />
             <div style={{ padding: '1.5rem', flex: 1 }}>
@@ -268,6 +277,47 @@ export default function IncidentPage() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Industry SOP References (You.com) */}
+                    {industrySOP.length > 0 && (
+                      <div style={{ border: '1px solid rgba(0,173,181,0.3)', background: 'rgba(0,173,181,0.04)', borderRadius: '8px', overflow: 'hidden' }}>
+                        <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(0,173,181,0.2)', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,173,181,0.08)' }}>
+                          <Globe size={14} color="#00ADB5" />
+                          <h4 style={{ fontSize: '0.78rem', fontWeight: 700, color: '#00ADB5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Industry References</h4>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>Real-time · You.com</span>
+                        </div>
+                        <div style={{ padding: '0.875rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                          {industrySOP.map((sop, i) => (
+                            <a
+                              key={i}
+                              href={sop.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'block', padding: '0.625rem 0.75rem',
+                                background: 'var(--color-ground-0)', borderRadius: '6px',
+                                border: '1px solid var(--color-border)',
+                                textDecoration: 'none', transition: 'border-color 0.15s',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.borderColor = '#00ADB5'}
+                              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: sop.snippet ? '0.3rem' : 0 }}>
+                                {sop.favicon && <img src={sop.favicon} alt="" width={12} height={12} style={{ borderRadius: 2, objectFit: 'contain' }} />}
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {sop.title}
+                                </span>
+                              </div>
+                              {sop.snippet && (
+                                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.45, margin: 0 }}>
+                                  {sop.snippet}
+                                </p>
+                              )}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 ) : (
                   <motion.div

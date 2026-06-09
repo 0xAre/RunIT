@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import './landing.css';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -9,14 +10,24 @@ import {
 } from 'lucide-react';
 import { useLangStore } from '@/store/langStore';
 import { dict } from '@/lib/i18n';
-import RadarPulse from '@/src/components/landing/RadarPulse';
-import { ChromaCard } from '@/src/components/landing/ChromaGrid';
+import RadarPulse from '@/components/landing/RadarPulse';
+import { ChromaCard } from '@/components/landing/ChromaGrid';
+import ValueProps from '@/components/landing/ValueProps';
+import HowItWorks from '@/components/landing/HowItWorks';
+import ContactDeveloper from '@/components/landing/ContactDeveloper';
+import FAQ from '@/components/landing/FAQ';
+import AnnouncementBanner from '@/components/landing/AnnouncementBanner';
+import StatsStrip from '@/components/landing/StatsStrip';
+import SocialProofStrip from '@/components/landing/SocialProofStrip';
+import CommunitySection from '@/components/landing/CommunitySection';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 /* ── Data ─────────────────────────────────────────────────────── */
 
 const STAGES = [
-  'Blueprint', 'Dependencies', 'Simulate',
-  'Live Execution', 'Incident Response', 'Report', 'Copilot',
+  'AI Panitia', 'Brief', 'Draft Pesan', 'Blueprint',
+  'Simulate', 'Live', 'Report',
 ];
 
 const STAGE_GRADIENTS = [
@@ -43,6 +54,25 @@ const MARQUEE_ITEMS = [
 export default function HomePage() {
   const { lang, toggleLang } = useLangStore();
   const t = dict[lang];
+  const { user, bypassLogin } = useAuth();
+  const router = useRouter();
+  const [bannerVisible, setBannerVisible] = useState(false);
+
+  const handleBannerChange = useCallback((visible: boolean) => {
+    setBannerVisible(visible);
+  }, []);
+
+  const handleCtaClick = (e: React.MouseEvent) => {
+    if (!user) {
+      e.preventDefault();
+      router.push('/auth/signin');
+    }
+  };
+
+  const handleBypass = () => {
+    bypassLogin();
+    router.push('/workspace/new');
+  };
 
   const features = [
     {
@@ -98,22 +128,40 @@ export default function HomePage() {
   return (
     <div style={{ background: '#000', minHeight: '100vh', overflowX: 'hidden' }}>
 
+      {/* ── ANNOUNCEMENT BANNER ──────────────────────── */}
+      <AnnouncementBanner onVisibilityChange={handleBannerChange} />
+
       {/* ── NAV ─────────────────────────────────────── */}
-      <nav className="landing-nav">
+      <nav
+        className="landing-nav"
+        style={{ top: bannerVisible ? '40px' : '0', transition: 'top 0.25s ease' }}
+      >
         <Link href="/" className="landing-wordmark">
           Run<em>IT</em>
         </Link>
-        <div className="landing-nav-actions">
+        <div className="landing-nav-actions flex items-center gap-2 sm:gap-4">
+          <Link href="/workflow" className="landing-nav-link" style={{ display: 'none' }}
+            aria-label="How it works"
+          >
+            Workflow
+          </Link>
           <button
             onClick={toggleLang}
             className="landing-nav-link"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
             aria-label="Toggle language"
           >
             <Globe size={14} />
             {lang === 'en' ? 'EN' : 'ID'}
           </button>
-          <Link href="/workspace/new" className="landing-nav-btn">
+          {!user && (
+            <Link 
+              href="/auth/signin"
+              className="text-sm font-medium text-[var(--landing-teal)] border border-[rgba(0,173,181,0.3)] hover:bg-[rgba(0,173,181,0.08)] px-4 py-2 rounded-lg transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
+          <Link href="/workspace/new" onClick={handleCtaClick} className="landing-nav-btn">
             {t.navDashboard}
           </Link>
         </div>
@@ -135,7 +183,7 @@ export default function HomePage() {
         {/* Eyebrow */}
         <span className="landing-hero-eyebrow">
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
-          AI · Event Execution System
+          AI · Event Committee · Draft & Send
         </span>
 
         {/* H1 — cinematic scale */}
@@ -144,7 +192,6 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          style={{ position: 'relative', zIndex: 1 }}
         >
           {t.heroTitle1}<br />
           <span className="teal">{t.heroTitle2}</span>
@@ -156,7 +203,6 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.15 }}
-          style={{ position: 'relative', zIndex: 1 }}
         >
           {t.heroSubtitle}
         </motion.p>
@@ -167,9 +213,8 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.28 }}
-          style={{ position: 'relative', zIndex: 1 }}
         >
-          <Link href="/workspace/new" className="landing-btn-primary">
+          <Link href="/workspace/new" onClick={handleCtaClick} className="landing-btn-primary">
             {t.heroStartBtn} <ArrowRight size={16} />
           </Link>
           <a href="#features" className="landing-btn-secondary">
@@ -198,27 +243,48 @@ export default function HomePage() {
         </motion.div>
       </section>
 
+      {/* ── STATS STRIP (Colosseum style) ─────────────── */}
+      <StatsStrip />
+
+      {/* ── SOCIAL PROOF STRIP (Colosseum logo row) ───── */}
+      <SocialProofStrip />
+
+      {/* Teal divider */}
+      <hr className="landing-teal-divider" />
+
+      {/* ── VALUE PROPS ─────────────────────────────── */}
+      <ValueProps />
+
+      {/* Teal divider */}
+      <hr className="landing-teal-divider" />
+
+      {/* ── HOW IT WORKS ────────────────────────────── */}
+      <HowItWorks />
+
+      {/* Teal divider */}
+      <hr className="landing-teal-divider" />
+
       {/* ── FEATURES ────────────────────────────────── */}
       <section id="features" className="landing-section" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* Section header */}
-          <div className="landing-section-header">
+          <motion.div
+            className="landing-section-header"
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
             <span className="landing-section-eyebrow">// operational capabilities</span>
             <h2 className="landing-section-title">Everything you need<br />to run it.</h2>
             <p className="landing-section-subtitle">
               A complete toolkit for modern event operators — from blueprint to real-time incident response.
             </p>
-          </div>
+          </motion.div>
 
           {/* Editorial feature grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '1rem',
-            }}
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {/* Row 1: 3 equal columns */}
             {features.slice(0, 3).map((f, i) => (
               <motion.div
@@ -250,7 +316,7 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.25, duration: 0.5, ease: [0.16,1,0.3,1] }}
-              style={{ gridColumn: '1 / span 2' }}
+              className="sm:col-span-2"
             >
               {(() => {
                 const LiveIcon = features[3].icon;
@@ -261,7 +327,7 @@ export default function HomePage() {
                     spotlightColor={features[3].spotlightColor}
                     style={{ height: '100%' }}
                   >
-                    <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+                    <div className="flex flex-col sm:flex-row gap-6 items-start">
                       <div style={{ flex: 1 }}>
                         <div className="landing-card-icon">
                           <LiveIcon size={20} color="#55B467" />
@@ -306,7 +372,7 @@ export default function HomePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: (i + 3) * 0.08, duration: 0.5, ease: [0.16,1,0.3,1] }}
-                  style={isReport ? { gridColumn: '1 / -1' } : {}}
+                  className={isReport ? "md:col-span-3 sm:col-span-2" : ""}
                 >
                   <ChromaCard
                     gradientFrom={f.gradient.from}
@@ -314,7 +380,7 @@ export default function HomePage() {
                     spotlightColor={f.spotlightColor}
                     style={{ height: '100%' }}
                   >
-                    <div style={isReport ? { display: 'flex', gap: '2rem', alignItems: 'center' } : {}}>
+                    <div className={isReport ? "flex flex-col sm:flex-row gap-6 items-start sm:items-center" : ""}>
                       <div style={isReport ? { flexShrink: 0, width: '250px' } : {}}>
                         <div className="landing-card-icon" style={{ background: 'rgba(160,160,160,0.08)', borderColor: 'rgba(160,160,160,0.15)' }}>
                           <f.icon size={20} color="#A0A0A0" />
@@ -329,9 +395,9 @@ export default function HomePage() {
                           </>
                         )}
                       </div>
-                      
+
                       {isReport && (
-                        <div style={{ flex: 1, borderLeft: '1px solid rgba(255,255,255,0.06)', paddingLeft: '2rem' }}>
+                        <div className="flex-1 sm:border-l border-[rgba(255,255,255,0.06)] sm:pl-8">
                           <h3 className="landing-card-title" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{f.title}</h3>
                           <p className="landing-card-desc" style={{ fontSize: '1rem', maxWidth: '600px' }}>{f.desc}</p>
                         </div>
@@ -343,24 +409,26 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* Responsive: collapse grid on mobile */}
-          <style>{`
-            @media (max-width: 900px) {
-              #features [style*="grid-template-columns: repeat(3"] {
-                grid-template-columns: 1fr 1fr !important;
-              }
-            }
-            @media (max-width: 620px) {
-              #features [style*="grid-template-columns"] {
-                grid-template-columns: 1fr !important;
-              }
-              #features [style*="grid-column: 1 / span 2"] {
-                grid-column: 1 !important;
-              }
-            }
-          `}</style>
         </div>
       </section>
+
+      {/* Teal divider */}
+      <hr className="landing-teal-divider" />
+
+      {/* ── STATS ───────────────────────────────────── */}
+      <ContactDeveloper />
+
+      {/* Teal divider */}
+      <hr className="landing-teal-divider" />
+
+      {/* ── FAQ ─────────────────────────────────────── */}
+      <FAQ />
+
+      {/* Teal divider */}
+      <hr className="landing-teal-divider" />
+
+      {/* ── COMMUNITY SECTION (Colosseum style) ─────── */}
+      <CommunitySection />
 
       {/* Teal divider */}
       <hr className="landing-teal-divider" />
@@ -396,14 +464,13 @@ export default function HomePage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          style={{ position: 'relative', zIndex: 1 }}
         >
           {t.ctaTitle}
         </motion.h2>
-        <p className="landing-cta-subtitle" style={{ position: 'relative', zIndex: 1 }}>
+        <p className="landing-cta-subtitle">
           {t.ctaSubtitle}
         </p>
-        <Link href="/workspace/new" className="landing-btn-primary" style={{ position: 'relative', zIndex: 1 }}>
+        <Link href="/workspace/new" onClick={handleCtaClick} className="landing-btn-primary">
           {t.ctaBtn} <ArrowRight size={16} />
         </Link>
       </section>
@@ -413,9 +480,18 @@ export default function HomePage() {
         <Link href="/" className="landing-wordmark" style={{ fontSize: '1rem' }}>
           Run<em>IT</em>
         </Link>
-        <span className="landing-footer-copy">
-          © 2026 RUNIT AI · OPERATIONAL INTELLIGENCE FOR EVENTS
-        </span>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <button 
+            onClick={handleBypass}
+            className="text-xs text-gray-500 hover:text-[var(--landing-teal)] transition-colors border border-gray-800 rounded px-3 py-1 bg-gray-900/50"
+            title="Use this to preview the workspace without saving data to Firebase"
+          >
+            Bypass Login (Trial Mode)
+          </button>
+          <span className="landing-footer-copy">
+            © 2026 RUNIT AI · OPERATIONAL INTELLIGENCE
+          </span>
+        </div>
       </footer>
 
     </div>

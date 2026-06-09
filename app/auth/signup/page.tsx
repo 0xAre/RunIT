@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '@/src/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { ArrowRight, User, Mail, Lock } from 'lucide-react';
 
 /* ── Colosseum CornerSquare — exact CSS from arena.colosseum.org ── */
