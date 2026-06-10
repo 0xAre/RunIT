@@ -498,9 +498,9 @@ export default function NewEventPage() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    style={{ overflow: 'hidden' }}
+                    style={{ overflow: 'visible' }}
                   >
-                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.875rem', overflow: 'visible' }}>
                       <div>
                         <label className="form-label">
                           Nama {selectedTemplate.label} <span style={{ color: 'var(--accent-rose)' }}>*</span>
@@ -515,8 +515,8 @@ export default function NewEventPage() {
                           style={{ width: '100%' }}
                         />
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" style={{ overflow: 'visible' }}>
+                        <div style={{ position: 'relative', zIndex: 20, overflow: 'visible' }}>
                           <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: '0.2rem' }}>
                             <Calendar size={11} style={{ marginRight: 3 }} />
                             Tanggal / Timeline

@@ -6,8 +6,20 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
 
       match /events/{eventId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null && (
+          request.auth.uid == userId ||
+          request.auth.uid in resource.data.get('memberUids', [])
+        );
+        allow create: if request.auth != null && request.auth.uid == userId;
+        allow update, delete: if request.auth != null && (
+          request.auth.uid == userId ||
+          request.auth.uid in resource.data.get('editorUids', [])
+        );
       }
+    }
+
+    match /eventMemberships/{memberUid}/refs/{eventId} {
+      allow read, write: if request.auth != null && request.auth.uid == memberUid;
     }
   }
 }

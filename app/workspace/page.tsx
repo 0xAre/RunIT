@@ -1,21 +1,31 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { useEventStore, type EventData } from '@/store/eventStore';
-import { Plus, LayoutDashboard, GitBranch, Zap, ChevronRight, Calendar, Users, Globe, Copy } from 'lucide-react';
-import Link from 'next/link';
-import { useLangStore } from '@/store/langStore';
-import { dict } from '@/lib/i18n';
-import DuplicateEventModal from '@/components/DuplicateEventModal';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { useEventStore, type EventData } from "@/store/eventStore";
+import {
+  Plus,
+  LayoutDashboard,
+  GitBranch,
+  ChevronRight,
+  Calendar,
+  Users,
+  Globe,
+  Copy,
+} from "lucide-react";
+import Link from "next/link";
+import { useLangStore } from "@/store/langStore";
+import { dict } from "@/lib/i18n";
+import DuplicateEventModal from "@/components/DuplicateEventModal";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function WorkspaceDashboard() {
   const router = useRouter();
   const { events, loadUserEvents } = useEventStore();
   const [loading, setLoading] = useState(true);
   const [duplicatingEvent, setDuplicatingEvent] = useState<EventData | null>(null);
-  
+
   const { lang, toggleLang } = useLangStore();
   const t = dict[lang];
 
@@ -32,197 +42,178 @@ export default function WorkspaceDashboard() {
     fetchEvents();
   }, [loadUserEvents]);
 
+  const taskCount = (event: EventData) =>
+    event.masterPlan
+      ? event.masterPlan.divisions.reduce((acc, div) => acc + (div.tasks?.length || 0), 0)
+      : 0;
+
   return (
-    <div style={{
-      minHeight: '100vh', background: 'var(--bg-primary)',
-      display: 'flex', flexDirection: 'column', position: 'relative'
-    }}>
-      {/* Background Grid */}
+    <div className="workspace-shell" style={{ position: "relative" }}>
       <div className="grid-bg" />
 
-      {/* Nav */}
-      <nav className="flex items-center justify-between p-4 sm:px-8 border-b border-[var(--border)] sticky top-0 z-50" style={{
-        background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(12px)'
-      }}>
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-          <div style={{
-            width: '28px', height: '28px', borderRadius: '8px',
-            background: 'var(--text-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <Zap size={14} color="var(--bg-primary)" style={{ fill: 'var(--bg-primary)' }} />
+      <header className="workspace-topbar">
+        <div className="workspace-inner workspace-topbar__row">
+          <div className="workspace-breadcrumb">
+            <BrandLogo variant="workspace" href="/workspace" size={28} />
+            <span className="workspace-breadcrumb__sep hidden sm:inline">/</span>
+            <span className="workspace-breadcrumb__trail hidden sm:inline">{t.navWorkspace}</span>
+            <span className="workspace-breadcrumb__sep hidden sm:inline">/</span>
+            <span className="workspace-breadcrumb__current hidden sm:inline">{t.dashTitle}</span>
           </div>
-          <span style={{ fontWeight: 600, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>RunIt</span>
-          <span style={{ color: 'var(--border-strong)', margin: '0 0.5rem' }}>/</span>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>{t.navWorkspace}</span>
-        </Link>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button onClick={toggleLang} className="btn-ghost" style={{ padding: '0.4rem 0.6rem', gap: '0.3rem', fontSize: '0.8rem' }}>
-            <Globe size={14} />
-            {lang === 'en' ? 'EN' : 'ID'}
-          </button>
-          <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
-          <Link href="/workspace/new">
-            <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
-              <Plus size={14} />
-              {t.navNewProject}
-            </button>
-          </Link>
-          <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}>U</span>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12 relative z-10">
-        <div style={{ marginBottom: '3rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 600, marginBottom: '0.5rem', letterSpacing: '-0.03em' }}>
-            {t.dashTitle}
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-            {t.dashSubtitle}
-          </p>
-        </div>
-
-        {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}>
-            <div className="spinner" />
-          </div>
-        ) : events.length === 0 ? (
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '2rem' }}>
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{ 
-                width: '100%', maxWidth: '600px',
-                padding: '4rem 2rem', textAlign: 'center',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem',
-                border: '1px dashed var(--border-strong)', borderRadius: '12px',
-                background: 'var(--bg-card)'
-              }}
+          <div className="workspace-topbar__actions">
+            <button
+              type="button"
+              onClick={toggleLang}
+              className="btn-ghost"
+              style={{ padding: "0.35rem 0.55rem", gap: "0.3rem", fontSize: "0.8rem" }}
             >
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <LayoutDashboard size={24} color="var(--text-secondary)" />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>{t.dashNoProjects}</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto' }}>
-                  {t.dashNoProjectsDesc}
-                </p>
-              </div>
-              <Link href="/workspace/new">
-                <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem' }}>
-                  <Plus size={16} />
-                  {t.dashCreateProjectBtn}
-                </button>
-              </Link>
-            </motion.div>
+              <Globe size={14} />
+              {lang === "en" ? "EN" : "ID"}
+            </button>
+            <Link href="/workspace/new" className="btn-primary">
+              <Plus size={15} strokeWidth={2} />
+              <span className="hidden sm:inline">{t.navNewProject}</span>
+              <span className="sm:hidden">Baru</span>
+            </Link>
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-full border sm:h-9 sm:w-9"
+              style={{ borderColor: "var(--color-border)", background: "var(--color-ground-2)" }}
+            >
+              <span className="font-heading text-[0.75rem] sm:text-body-sm" style={{ color: "var(--color-text-muted)" }}>
+                U
+              </span>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event, i) => (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="glass glass-hover"
-                onClick={() => router.push(`/workspace/${event.id}/overview`)}
-                style={{ 
-                  padding: '1.5rem', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', gap: '1.25rem',
-                  textDecoration: 'none', position: 'relative',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <span className="badge" style={{ color: 'var(--text-secondary)' }}>{event.type}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span className="badge badge-emerald">
-                      <div className="pulse-dot" style={{ width: '4px', height: '4px' }} />
-                      {event.stage}
-                    </span>
-                    {/* Duplicate button */}
-                    <button
-                      onClick={e => { e.stopPropagation(); setDuplicatingEvent(event); }}
-                      title="Duplikasi event ini"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '0.3rem',
-                        padding: '0.25rem 0.5rem', borderRadius: 6,
-                        background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                        color: 'var(--text-muted)', cursor: 'pointer',
-                        fontSize: '0.7rem', fontWeight: 600,
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={e => {
-                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-blue, #00ADB5)';
-                        (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-blue, #00ADB5)';
-                      }}
-                      onMouseLeave={e => {
-                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                        (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-                      }}
-                    >
-                      <Copy size={11} /> Duplikasi
-                    </button>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.4rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.01em' }}>
-                    {event.name}
-                  </h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                    <Calendar size={14} />
-                    <span>{event.timeline}</span>
-                  </div>
-                </div>
+        </div>
+      </header>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                      <Users size={12} />
-                      <span className="clean-label">{t.dashPax}</span>
-                    </div>
-                    <p style={{ fontWeight: 500, fontSize: '1rem', color: 'var(--text-primary)' }}>{event.participants.toLocaleString()}</p>
+      <main className="workspace-main-body relative z-10 flex-1">
+          <div className="workspace-inner">
+            <header className="workspace-page-header">
+              <h1 className="workspace-page-header__title">{t.dashTitle}</h1>
+              <p className="workspace-page-header__subtitle">{t.dashSubtitle}</p>
+            </header>
+
+            {loading ? (
+              <div className="flex justify-center py-16">
+                <div className="spinner" />
+              </div>
+            ) : events.length === 0 ? (
+              <div className="flex justify-center">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="colosseum-card w-full max-w-md p-10 text-center"
+                >
+                  <div
+                    className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-sm border"
+                    style={{
+                      borderColor: "var(--color-border-accent)",
+                      background: "var(--color-ground-3)",
+                    }}
+                  >
+                    <LayoutDashboard size={22} style={{ color: "var(--color-mint)" }} strokeWidth={1.5} />
                   </div>
-                  <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                      <GitBranch size={12} />
-                      <span className="clean-label">{t.dashTasks}</span>
+                  <h2 className="mb-2 font-heading text-lg font-medium" style={{ color: "var(--color-text)" }}>
+                    {t.dashNoProjects}
+                  </h2>
+                  <p className="mb-6 text-body-sm" style={{ color: "var(--color-text-muted)" }}>
+                    {t.dashNoProjectsDesc}
+                  </p>
+                  <Link href="/workspace/new" className="btn-primary">
+                    <Plus size={15} strokeWidth={2} />
+                    {t.dashCreateProjectBtn}
+                  </Link>
+                </motion.div>
+              </div>
+            ) : (
+              <div className="workspace-project-grid">
+                {events.map((event, i) => (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="colosseum-card colosseum-card--tile group cursor-pointer"
+                    onClick={() => router.push(`/workspace/${event.id}/overview`)}
+                    role="link"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/workspace/${event.id}/overview`);
+                      }
+                    }}
+                  >
+                    <div className="colosseum-card__head">
+                      <div className="colosseum-card__icon" aria-hidden>
+                        {event.name.trim().charAt(0).toUpperCase()}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDuplicatingEvent(event);
+                        }}
+                        title="Duplikasi event ini"
+                        className="colosseum-card__dup"
+                        aria-label="Duplikasi"
+                      >
+                        <Copy size={14} strokeWidth={1.5} />
+                      </button>
                     </div>
-                    <p style={{ fontWeight: 500, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                      {event.masterPlan ? (
-                        Object.values(event.masterPlan.divisions).reduce((acc: number, div: any) => acc + (div.tasks?.length || 0), 0)
-                      ) : '0'}
+
+                    <div className="colosseum-card__tags">
+                      <span className="badge badge--neutral text-[10px] uppercase tracking-wide">
+                        {event.type}
+                      </span>
+                      <span className="badge badge--success text-[10px] uppercase tracking-wide">
+                        {event.stage}
+                      </span>
+                    </div>
+
+                    <h3 className="colosseum-card__title">{event.name}</h3>
+
+                    <p className="colosseum-card__meta">
+                      <span className="colosseum-card__meta-item">
+                        <Calendar size={12} strokeWidth={1.5} style={{ color: "var(--color-mint)", opacity: 0.7 }} />
+                        {event.timeline}
+                      </span>
                     </p>
-                  </div>
-                </div>
 
-                <div style={{ 
-                  marginTop: '0.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {t.dashCreated} {new Date(event.createdAt).toLocaleDateString()}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: 500 }}>
-                    {t.dashOpenProject}
-                    <ChevronRight size={14} />
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                    <div className="colosseum-card__stats">
+                      <div className="colosseum-card__stat">
+                        <div className="colosseum-card__stat-label">
+                          <Users size={10} strokeWidth={1.5} />
+                          {t.dashPax}
+                        </div>
+                        <p className="colosseum-card__stat-value">{event.participants.toLocaleString()}</p>
+                      </div>
+                      <div className="colosseum-card__stat">
+                        <div className="colosseum-card__stat-label">
+                          <GitBranch size={10} strokeWidth={1.5} />
+                          {t.dashTasks}
+                        </div>
+                        <p className="colosseum-card__stat-value">{taskCount(event)}</p>
+                      </div>
+                    </div>
+
+                    <div className="colosseum-card__footer">
+                      {t.dashOpenProject}
+                      <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {duplicatingEvent && (
+              <DuplicateEventModal
+                sourceEvent={duplicatingEvent}
+                onClose={() => setDuplicatingEvent(null)}
+              />
+            )}
           </div>
-        )}
-
-        {/* Duplicate Modal */}
-        {duplicatingEvent && (
-          <DuplicateEventModal
-            sourceEvent={duplicatingEvent}
-            onClose={() => setDuplicatingEvent(null)}
-          />
-        )}
       </main>
     </div>
   );

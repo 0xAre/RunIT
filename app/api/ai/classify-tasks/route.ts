@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { requireApiAuth } from '@/lib/require-api-auth';
+import { requireAiRoute } from '@/lib/ai-route-guard';
 import { classifyAllTasks } from '@/lib/task-agents';
 export const runtime = 'nodejs';
 
 
 export async function POST(req: Request) {
-  const authError = await requireApiAuth(req as any);
+  const authError = await requireAiRoute(req as any);
   if (authError) return authError;
   try {
     const { tasks, eventData } = await req.json();

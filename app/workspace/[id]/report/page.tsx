@@ -47,6 +47,7 @@ export default function ReportPage() {
     currentEvent?.reportModules ? (Object.keys(currentEvent.reportModules)[0] as PostEventModule) : null
   );
   const [error, setError] = useState<string | null>(null);
+  const [exportingPdf, setExportingPdf] = useState<'lpj' | 'pack' | null>(null);
 
   useEffect(() => {
     if (currentEvent?.reportModules && !results) {
@@ -109,6 +110,36 @@ export default function ReportPage() {
     navigator.clipboard.writeText(text);
   };
 
+  const handleExportPdf = async (mode: 'lpj' | 'pack') => {
+    if (!currentEvent || !results) return;
+    setExportingPdf(mode);
+    setError(null);
+    try {
+      const res = await apiFetch('/api/export/report-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventName: currentEvent.name, modules: results, mode }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'PDF export failed');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = mode === 'lpj'
+        ? `${currentEvent.name.replace(/[^a-zA-Z0-9-_]/g, '_')}_LPJ.pdf`
+        : `${currentEvent.name.replace(/[^a-zA-Z0-9-_]/g, '_')}_EventPack.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'PDF export failed');
+    } finally {
+      setExportingPdf(null);
+    }
+  };
+
   const simpleMd = (md: string) => md
     .replace(/^### (.+)$/gm, '<h4 style="margin-top:1rem;margin-bottom:0.3rem;font-size:0.95rem;font-weight:700;color:var(--color-text-primary)">$1</h4>')
     .replace(/^## (.+)$/gm, '<h3 style="margin-top:1.25rem;margin-bottom:0.4rem;font-size:1.1rem;font-weight:700;color:var(--color-text-primary)">$1</h3>')
@@ -125,17 +156,16 @@ export default function ReportPage() {
   const total = currentEvent.masterPlan?.divisions.flatMap(d => d.tasks).length || 0;
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-          <Activity size={22} color="#25D0AB" />
-          <h1 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>Post-Event Intelligence Hub</h1>
+    <div className="flex flex-col gap-6">
+      <header className="project-page-header" style={{ marginBottom: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.35rem' }}>
+          <Activity size={20} color="var(--color-mint)" />
+          <h1 className="project-page-header__title" style={{ margin: 0 }}>Post-Event Intelligence Hub</h1>
         </div>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>
+        <p className="project-page-header__subtitle">
           {currentEvent.name} · {completed}/{total} tasks completed · Generate all post-event deliverables in one click
         </p>
-      </div>
+      </header>
 
       {/* Module grid + actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" style={{ marginBottom: '1.5rem' }}>
@@ -195,7 +225,33 @@ export default function ReportPage() {
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
               {MODULE_LABELS[activeView].label}
             </h3>
-            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handleExportPdf('lpj')}
+                disabled={!results.report || exportingPdf !== null}
+                style={{
+                  padding: '0.35rem 0.65rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600,
+                  background: 'rgba(37,208,171,0.1)', border: '1px solid #25D0AB', color: '#25D0AB',
+                  cursor: exportingPdf ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  opacity: exportingPdf ? 0.6 : 1,
+                }}
+              >
+                {exportingPdf === 'lpj' ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={12} />}
+                Download LPJ
+              </button>
+              <button
+                onClick={() => handleExportPdf('pack')}
+                disabled={exportingPdf !== null}
+                style={{
+                  padding: '0.35rem 0.65rem', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600,
+                  background: 'rgba(124,106,245,0.1)', border: '1px solid #7C6AF5', color: '#7C6AF5',
+                  cursor: exportingPdf ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  opacity: exportingPdf ? 0.6 : 1,
+                }}
+              >
+                {exportingPdf === 'pack' ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={12} />}
+                Export Event Pack
+              </button>
               <button
                 onClick={() => window.print()}
                 style={{
@@ -204,7 +260,7 @@ export default function ReportPage() {
                   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem',
                 }}
               >
-                <Printer size={12} /> Print / PDF
+                <Printer size={12} /> Print
               </button>
               {Object.keys(results).map(mk => (
                 <button key={mk}

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireApiAuth } from '@/lib/require-api-auth';
+import { requireAiRoute } from '@/lib/ai-route-guard';
 import { getAiCopilotAdvice } from '@/lib/gemini';
 export const runtime = 'nodejs';
 
 
 export async function POST(req: NextRequest) {
-  const authError = await requireApiAuth(req);
+  const authError = await requireAiRoute(req);
   if (authError) return authError;
   try {
     const { eventData, question, context } = await req.json();

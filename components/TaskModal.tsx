@@ -29,7 +29,12 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
       const res = await apiFetch('/api/ai/sourcing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: sourcingQuery, locationContext: currentEvent?.name, taskTitle: task?.title || '' }),
+        body: JSON.stringify({
+          query: sourcingQuery,
+          locationContext: currentEvent?.venue || currentEvent?.name,
+          taskTitle: task?.title || '',
+          eventData: currentEvent,
+        }),
       });
       const data = await res.json();
       if (res.ok) setSourcingResult(data);

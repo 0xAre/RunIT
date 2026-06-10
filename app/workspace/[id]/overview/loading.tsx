@@ -1,6 +1,6 @@
 export default function WorkspaceSubpageLoading() {
   return (
-    <div className="flex flex-col gap-6 max-w-[960px] mx-auto p-4 md:p-8">
+    <div className="flex flex-col gap-6">
       {/* Title */}
       <div>
         <div style={{ width: 200, height: 28, borderRadius: 5, background: 'var(--color-ground-3)', marginBottom: '0.5rem', animation: 'skeleton-pulse 1.4s ease-in-out infinite' }} />

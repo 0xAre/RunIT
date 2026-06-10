@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/require-api-auth';
+import { rankByQuery } from '@/lib/location-search';
+import { canUseGoogleMapsServer, getServerMapsKey } from '@/lib/google-maps-config';
 export const runtime = 'nodejs';
 
 
@@ -14,16 +16,13 @@ export interface GeocodeResult {
 
 /* ── Google Geocoding API ──────────────────────────────────── */
 async function geocodeGoogle(query: string): Promise<GeocodeResult[]> {
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) throw new Error('No Google Maps API key');
+  const key = getServerMapsKey();
+  if (!key) throw new Error('No server Google Maps API key');
 
   const encoded = encodeURIComponent(query);
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${key}&language=id&region=ID`;
 
-  const res = await fetch(url, { 
-    headers: { 'Referer': 'http://localhost:3000/' },
-    signal: AbortSignal.timeout(8000) 
-  });
+  const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
   if (!res.ok) throw new Error(`Google Geocoding error: ${res.status}`);
 
   const data = await res.json();
@@ -57,15 +56,12 @@ async function geocodeGoogle(query: string): Promise<GeocodeResult[]> {
 
 /* ── Google Reverse Geocoding ─────────────────────────────── */
 async function reverseGeocodeGoogle(lat: number, lng: number): Promise<GeocodeResult> {
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) throw new Error('No Google Maps API key');
+  const key = getServerMapsKey();
+  if (!key) throw new Error('No server Google Maps API key');
 
   const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}&language=id`;
 
-  const res = await fetch(url, { 
-    headers: { 'Referer': 'http://localhost:3000/' },
-    signal: AbortSignal.timeout(8000) 
-  });
+  const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
   if (!res.ok) throw new Error(`Google Reverse Geocoding error: ${res.status}`);
 
   const data = await res.json();
@@ -96,7 +92,7 @@ async function reverseGeocodeGoogle(lat: number, lng: number): Promise<GeocodeRe
 /* ── Nominatim fallback ──────────────────────────────────── */
 async function geocodeNominatim(query: string): Promise<GeocodeResult[]> {
   const encoded = encodeURIComponent(query);
-  const url = `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&addressdetails=1&limit=3&accept-language=id&countrycodes=id`;
+  const url = `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&addressdetails=1&limit=8&accept-language=id&countrycodes=id`;
 
   const res = await fetch(url, {
     headers: { 'User-Agent': 'RunIT-EventApp/1.0 (contact@runit.app)', 'Accept-Language': 'id' },
@@ -107,7 +103,7 @@ async function geocodeNominatim(query: string): Promise<GeocodeResult[]> {
   const data = await res.json();
   if (!Array.isArray(data) || !data.length) return [];
 
-  return data.slice(0, 3).map((item: {
+  return data.slice(0, 8).map((item: {
     lat: string; lon: string; display_name: string;
     address?: { city?: string; town?: string; county?: string; country?: string };
     boundingbox?: string[];
@@ -162,22 +158,25 @@ export async function POST(req: NextRequest) {
       lng?: number;
     };
 
-    const hasGoogleKey = !!process.env.GOOGLE_MAPS_API_KEY;
+    const useGoogle = canUseGoogleMapsServer();
 
     /* ── Reverse geocoding ─── */
     if (reverse && lat !== undefined && lng !== undefined) {
       let result;
-      let source = 'google';
+      let source = 'openstreetmap';
       try {
-        if (!hasGoogleKey) throw new Error('No Google Maps API Key');
-        result = await reverseGeocodeGoogle(lat, lng);
-      } catch (gErr) {
-        console.warn(`[Reverse Geocode] Google failed, falling back to Nominatim:`, gErr);
-        try {
-          result = await reverseGeocodeNominatim(lat, lng);
-          source = 'openstreetmap';
-        } catch (nErr) {
-          console.warn(`[Reverse Geocode] Nominatim also failed:`, nErr);
+        result = await reverseGeocodeNominatim(lat, lng);
+      } catch (nErr) {
+        console.warn('[Reverse Geocode] Nominatim failed:', nErr);
+        if (useGoogle) {
+          try {
+            result = await reverseGeocodeGoogle(lat, lng);
+            source = 'google';
+          } catch {
+            result = { lat, lng, displayName: `${lat}, ${lng}` };
+            source = 'none';
+          }
+        } else {
           result = { lat, lng, displayName: `${lat}, ${lng}` };
           source = 'none';
         }
@@ -188,22 +187,30 @@ export async function POST(req: NextRequest) {
     /* ── Forward geocoding ─── */
     if (query) {
       let results: GeocodeResult[] = [];
-      let source = 'google';
+      let source = 'openstreetmap';
+
       try {
-        if (!hasGoogleKey) throw new Error('No Google Maps API Key');
-        results = await geocodeGoogle(query);
-      } catch (gErr) {
-        console.warn(`[Forward Geocode] Google failed, falling back to Nominatim:`, gErr);
+        results = await geocodeNominatim(query);
+      } catch (nErr) {
+        console.warn('[Forward Geocode] Nominatim failed:', nErr);
+        results = [];
+      }
+
+      if (!results.length && useGoogle) {
         try {
-          results = await geocodeNominatim(query);
-          source = 'openstreetmap';
-        } catch (nErr) {
-          console.warn(`[Forward Geocode] Nominatim also failed:`, nErr);
-          results = [];
-          source = 'none';
+          results = await geocodeGoogle(query);
+          source = 'google';
+        } catch (gErr) {
+          console.warn('[Forward Geocode] Google failed:', gErr);
         }
       }
-      return NextResponse.json({ results, primary: results[0] || null, source });
+
+      const ranked = rankByQuery(query, results);
+      return NextResponse.json({
+        results: ranked,
+        primary: ranked[0] || null,
+        source,
+      });
     }
 
     return NextResponse.json({ error: 'Provide query or lat+lng for reverse' }, { status: 400 });

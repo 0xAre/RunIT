@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEventStore, type AgentAction } from '@/store/eventStore';
@@ -297,7 +298,7 @@ export default function AgentInboxPage() {
     setIsLoading(true);
     try {
       const endpoint = currentEvent.masterPlan ? '/api/ai/agent-inbox' : '/api/ai/committee-sourcing';
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventData: currentEvent }),

@@ -434,6 +434,632 @@ img, svg, video { display: block; max-width: 100%; }
 .glass-hover:hover { border-color: var(--color-border-strong); background: var(--color-ground-3); }
 
 /* ============================================================
+   WORKSPACE — Colosseum-style layout
+   ============================================================ */
+
+.workspace-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Shared column — topbar + content align on the same left edge */
+.workspace-inner {
+  width: 100%;
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--space-lg);
+  padding-right: var(--space-lg);
+}
+
+@media (min-width: 640px) {
+  .workspace-inner {
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
+  }
+}
+
+.workspace-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.workspace-topbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 56px;
+}
+
+.workspace-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.workspace-breadcrumb__trail {
+  color: var(--color-text-muted);
+}
+
+.workspace-breadcrumb__sep {
+  color: var(--color-text-faint);
+  user-select: none;
+}
+
+.workspace-breadcrumb__current {
+  color: var(--color-text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-topbar__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .workspace-topbar__actions {
+    gap: 0.75rem;
+  }
+}
+
+.workspace-page-header {
+  padding-top: 1.75rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (min-width: 640px) {
+  .workspace-page-header {
+    padding-top: 2.25rem;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+.workspace-page-header__title {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.workspace-page-header__subtitle {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+.workspace-main-body {
+  padding-bottom: 3rem;
+}
+
+@media (min-width: 640px) {
+  .workspace-main-body {
+    padding-bottom: 4rem;
+  }
+}
+
+/* Softer grid on workspace — less visual noise */
+.workspace-shell .grid-bg {
+  opacity: 0.45;
+  background-size: 64px 64px;
+}
+
+/* Project grid — 1 / 2 / 3 columns */
+.workspace-project-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .workspace-project-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .workspace-project-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+/* Colosseum bracket-corner card */
+.colosseum-card {
+  position: relative;
+  background: var(--color-ground-2);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  padding: var(--space-lg) var(--space-xl);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard);
+}
+
+.colosseum-card--row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.colosseum-card--tile {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--space-lg);
+}
+
+.colosseum-card--tile .colosseum-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.colosseum-card--tile .colosseum-card__tags {
+  margin-bottom: 0.65rem;
+}
+
+.colosseum-card--tile .colosseum-card__title {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 0.65rem;
+  min-height: 2.65em;
+}
+
+.colosseum-card--tile:hover .colosseum-card__title {
+  color: var(--color-mint);
+}
+
+.colosseum-card--tile .colosseum-card__meta {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: var(--space-md);
+  font-size: 0.78rem;
+}
+
+.colosseum-card__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.colosseum-card__stat {
+  padding: 0.5rem 0.6rem;
+  border-radius: 2px;
+  border: 1px solid var(--color-border);
+  background: var(--color-ground-1);
+}
+
+.colosseum-card__stat-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+}
+
+.colosseum-card__stat-value {
+  font-family: var(--font-data);
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.colosseum-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  margin-top: 0.75rem;
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-mint);
+}
+
+.colosseum-card--tile:hover .colosseum-card__dup,
+.colosseum-card--tile .colosseum-card__dup:focus-visible {
+  opacity: 1;
+}
+
+.colosseum-card__icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-ground-1);
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-mint);
+  letter-spacing: -0.02em;
+}
+
+.colosseum-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.colosseum-card__title {
+  margin: 0 0 6px;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.colosseum-card--row:hover .colosseum-card__title {
+  color: var(--color-mint);
+}
+
+.colosseum-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.colosseum-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.colosseum-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.colosseum-card__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-faint);
+}
+
+.colosseum-card__dup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard);
+}
+
+.colosseum-card--row:hover .colosseum-card__dup,
+.colosseum-card__dup:focus-visible {
+  opacity: 1;
+}
+
+.colosseum-card__dup:hover {
+  color: var(--color-mint);
+  background: rgba(0, 255, 163, 0.08);
+}
+
+@media (max-width: 639px) {
+  .colosseum-card--row {
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .colosseum-card__icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+  }
+
+  .colosseum-card__dup {
+    opacity: 1;
+  }
+}
+
+.colosseum-card::before,
+.colosseum-card::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
+.colosseum-card::before {
+  top: -1px;
+  right: -1px;
+  border-top: 2px solid var(--color-mint);
+  border-right: 2px solid var(--color-mint);
+}
+
+.colosseum-card::after {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 2px solid var(--color-mint);
+  border-left: 2px solid var(--color-mint);
+}
+
+.colosseum-card:hover {
+  border-color: var(--color-border-accent);
+  background: var(--color-ground-3);
+}
+
+/* ============================================================
+   PROJECT WORKSPACE — Colosseum full-bleed app shell
+   ============================================================ */
+
+.colosseum-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-ground-0);
+  position: relative;
+}
+
+.colosseum-app .grid-bg {
+  opacity: 0.28;
+  background-size: 64px 64px;
+}
+
+.colosseum-app__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+  height: var(--nav-height);
+  padding: 0 var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-ground-1);
+  position: relative;
+  z-index: 20;
+}
+
+.colosseum-app__header-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.colosseum-app__event-name {
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+.colosseum-app__header-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.colosseum-app__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.colosseum-app__status {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-mint);
+  background: rgba(37, 208, 171, 0.08);
+  border: 1px solid rgba(37, 208, 171, 0.2);
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .colosseum-app__status {
+    display: inline-flex;
+  }
+}
+
+.colosseum-app__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.colosseum-app__sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-ground-1);
+}
+
+.colosseum-app__sidebar-project {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.colosseum-app__sidebar-label {
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.colosseum-app__sidebar-title {
+  margin: 0;
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.colosseum-app__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md) var(--space-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.colosseum-app__nav-label {
+  font-size: var(--text-label);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.colosseum-app__nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.5rem var(--space-sm);
+  border-radius: 6px;
+  margin-bottom: 2px;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.colosseum-app__sidebar-footer {
+  padding: var(--space-sm);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.colosseum-app__main {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  background: var(--color-ground-0);
+}
+
+.colosseum-app__content {
+  width: 100%;
+  padding: 1.75rem var(--space-lg) 3rem;
+}
+
+@media (min-width: 768px) {
+  .colosseum-app__content {
+    padding: 2rem 2.5rem 3.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .colosseum-app__content {
+    padding: 2.25rem 3rem 4rem;
+  }
+}
+
+.project-page {
+  position: relative;
+  min-height: 0;
+  width: 100%;
+}
+
+.project-page-header {
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.project-page-header__title {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.project-page-header__subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+/* ============================================================
    BUTTONS
    ============================================================ */
 

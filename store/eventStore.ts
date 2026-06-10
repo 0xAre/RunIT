@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { doc, setDoc, onSnapshot, collection, getDocs } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, getDocs, getDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { normalizeEvent } from '@/lib/normalize-event';
 import type { DagTask, DivisionLoad, OCSResult, MitigationOption, PropagationResult } from '@/lib/dag-engine';
@@ -8,14 +8,19 @@ export type { DagTask, DivisionLoad, OCSResult, MitigationOption };
 
 // ── Debounced Firestore auto-save ───────────────────────────
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function eventDocRef(event: EventData) {
+  const ownerId = event.ownerId || auth.currentUser?.uid;
+  if (!ownerId) throw new Error('No owner for event');
+  return doc(db, 'users', ownerId, 'events', event.id);
+}
+
 function debouncedSave(get: () => { currentEvent: EventData | null }) {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     const user = auth.currentUser;
     const event = get().currentEvent;
     if (!user || !event) return;
-    const eventRef = doc(db, 'users', user.uid, 'events', event.id);
-    await setDoc(eventRef, event, { merge: true } as any);
+    await setDoc(eventDocRef(event), event, { merge: true } as any);
   }, 800);
 }
 
@@ -39,6 +44,28 @@ export interface ContactPIC {
   whatsapp?: string; // format: 628xxxxxxxxx
   telegram?: string; // @username or number
   email?: string;
+}
+
+export type EventMemberRole = 'owner' | 'editor' | 'viewer';
+
+export interface EventMember {
+  uid?: string;
+  email: string;
+  role: EventMemberRole;
+  divisionId?: string;
+  invitedAt?: string;
+}
+
+export interface CommsLogEntry {
+  id: string;
+  channel: 'whatsapp' | 'email' | 'telegram' | 'instagram';
+  sentAt: string;
+  recipientName: string;
+  recipientContact?: string;
+  preview: string;
+  taskId?: string;
+  contactId?: string;
+  sentByUid?: string;
 }
 
 export interface ExternalContact {
@@ -250,6 +277,13 @@ export interface EventData {
   agentActions: AgentAction[];
   budgetTracker?: BudgetTracker;
   reportModules?: Record<string, any>; // post-event generated modules
+  /** Event owner Firebase uid (path: users/{ownerId}/events/{id}) */
+  ownerId?: string;
+  members?: EventMember[];
+  /** Denormalized for Firestore security rules */
+  memberUids?: string[];
+  editorUids?: string[];
+  commsLog?: CommsLogEntry[];
   createdAt: string;
 }
 
@@ -303,6 +337,11 @@ interface EventStore {
   removePicContact: (id: string) => void;
   addExternalContact: (contact: ExternalContact) => void;
   removeExternalContact: (id: string) => void;
+  logCommsEntry: (entry: Omit<CommsLogEntry, 'id'>) => void;
+  addMember: (member: Omit<EventMember, 'invitedAt'>) => Promise<void>;
+  removeMember: (email: string) => Promise<void>;
+  updateMemberRole: (email: string, role: EventMemberRole) => Promise<void>;
+  acceptTeamInvite: (eventId: string, ownerId: string) => Promise<boolean>;
 
   // Firestore sync (exposed)
   listenToEvent: (eventId: string) => Promise<(() => void) | undefined>;
@@ -347,10 +386,19 @@ export const useEventStore = create<EventStore>((set, get) => ({
   listenToEvent: async (eventId: string) => {
     const user = auth.currentUser;
     if (!user) return;
-    const eventRef = doc(db, 'users', user.uid, 'events', eventId);
+
+    let ownerId = user.uid;
+    const membershipRef = doc(db, 'eventMemberships', user.uid, 'refs', eventId);
+    const membershipSnap = await getDoc(membershipRef);
+    if (membershipSnap.exists()) {
+      ownerId = (membershipSnap.data() as { ownerId: string }).ownerId;
+    }
+
+    const eventRef = doc(db, 'users', ownerId, 'events', eventId);
     const unsubscribe = onSnapshot(eventRef, (snap) => {
       if (snap.exists()) {
-        set({ currentEvent: normalizeEvent(snap.data() as Record<string, unknown>) });
+        const data = normalizeEvent(snap.data() as Record<string, unknown>);
+        set({ currentEvent: { ...data, ownerId: data.ownerId || ownerId } });
       }
     });
     return unsubscribe;
@@ -360,8 +408,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
     const user = auth.currentUser;
     const event = get().currentEvent;
     if (!user || !event) return;
-    const eventRef = doc(db, 'users', user.uid, 'events', event.id);
-    await setDoc(eventRef, event, { merge: true } as any);
+    await setDoc(eventDocRef(event), event, { merge: true } as any);
   },
 
   // ── Basic Actions ────────────────────────────────────────────────────────
@@ -398,6 +445,12 @@ export const useEventStore = create<EventStore>((set, get) => ({
     const user = auth.currentUser;
     const id = `evt-${Date.now()}`;
     const { execution, report, ...restData } = data;
+    const ownerMember: EventMember = {
+      uid: user?.uid,
+      email: user?.email || '',
+      role: 'owner',
+      invitedAt: new Date().toISOString(),
+    };
     const newEvent: EventData = {
       ...restData,
       id,
@@ -408,11 +461,15 @@ export const useEventStore = create<EventStore>((set, get) => ({
       organizerRole: data.organizerRole || 'solo',
       picContacts: data.picContacts || [],
       externalContacts: data.externalContacts || [],
+      ownerId: user?.uid,
+      members: [ownerMember],
+      memberUids: user ? [user.uid] : [],
+      editorUids: user ? [user.uid] : [],
+      commsLog: [],
       createdAt: new Date().toISOString(),
     };
     if (user) {
-      const eventRef = doc(db, 'users', user.uid, 'events', id);
-      setDoc(eventRef, newEvent);
+      setDoc(doc(db, 'users', user.uid, 'events', id), newEvent);
     }
     set(state => ({
       events: [...state.events, newEvent],
@@ -454,15 +511,199 @@ export const useEventStore = create<EventStore>((set, get) => ({
     } : null
   })),
 
+  logCommsEntry: (entry) => {
+    const state = get();
+    if (!state.currentEvent) return;
+    const logEntry: CommsLogEntry = {
+      ...entry,
+      id: `comms-${Date.now()}`,
+      sentByUid: auth.currentUser?.uid,
+    };
+    set({
+      currentEvent: {
+        ...state.currentEvent,
+        commsLog: [...(state.currentEvent.commsLog || []), logEntry],
+      },
+    });
+    debouncedSave(get);
+  },
+
+  addMember: async (member) => {
+    const state = get();
+    const user = auth.currentUser;
+    const event = state.currentEvent;
+    if (!user || !event) return;
+
+    const email = member.email.trim().toLowerCase();
+    if (!email) return;
+
+    const members = [...(event.members || [])];
+    if (members.some(m => m.email.toLowerCase() === email)) return;
+
+    const invited: EventMember = {
+      ...member,
+      email,
+      invitedAt: new Date().toISOString(),
+    };
+    if (member.uid) {
+      invited.uid = member.uid;
+    } else if (email === user.email?.toLowerCase()) {
+      invited.uid = user.uid;
+    }
+
+    const memberUids = [...(event.memberUids || [])];
+    const editorUids = [...(event.editorUids || [])];
+    if (invited.uid && !memberUids.includes(invited.uid)) {
+      memberUids.push(invited.uid);
+      if (invited.role === 'owner' || invited.role === 'editor') {
+        if (!editorUids.includes(invited.uid)) editorUids.push(invited.uid);
+      }
+      await setDoc(
+        doc(db, 'eventMemberships', invited.uid, 'refs', event.id),
+        { ownerId: event.ownerId || user.uid, role: invited.role, eventName: event.name, invitedAt: invited.invitedAt },
+        { merge: true } as any
+      );
+    }
+
+    const updated: EventData = {
+      ...event,
+      members: [...members, invited],
+      memberUids,
+      editorUids,
+    };
+    set({ currentEvent: updated });
+    await setDoc(eventDocRef(updated), updated, { merge: true } as any);
+  },
+
+  removeMember: async (email) => {
+    const state = get();
+    const event = state.currentEvent;
+    if (!event) return;
+
+    const target = (event.members || []).find(m => m.email.toLowerCase() === email.toLowerCase());
+    if (!target || target.role === 'owner') return;
+
+    const members = (event.members || []).filter(m => m.email.toLowerCase() !== email.toLowerCase());
+    let memberUids = [...(event.memberUids || [])];
+    let editorUids = [...(event.editorUids || [])];
+    if (target.uid) {
+      memberUids = memberUids.filter(id => id !== target.uid);
+      editorUids = editorUids.filter(id => id !== target.uid);
+    }
+
+    const updated: EventData = { ...event, members, memberUids, editorUids };
+    set({ currentEvent: updated });
+    await setDoc(eventDocRef(updated), updated, { merge: true } as any);
+    if (target.uid) {
+      await deleteDoc(doc(db, 'eventMemberships', target.uid, 'refs', event.id));
+    }
+  },
+
+  updateMemberRole: async (email, role) => {
+    const state = get();
+    const event = state.currentEvent;
+    if (!event) return;
+
+    const members = (event.members || []).map(m =>
+      m.email.toLowerCase() === email.toLowerCase() ? { ...m, role } : m
+    );
+    let editorUids = [...(event.editorUids || [])];
+    const target = members.find(m => m.email.toLowerCase() === email.toLowerCase());
+    if (target?.uid) {
+      if (role === 'editor' || role === 'owner') {
+        if (!editorUids.includes(target.uid)) editorUids.push(target.uid);
+      } else {
+        editorUids = editorUids.filter(id => id !== target.uid);
+      }
+      await setDoc(
+        doc(db, 'eventMemberships', target.uid, 'refs', event.id),
+        { role },
+        { merge: true } as any
+      );
+    }
+
+    const updated: EventData = { ...event, members, editorUids };
+    set({ currentEvent: updated });
+    await setDoc(eventDocRef(updated), updated, { merge: true } as any);
+  },
+
+  acceptTeamInvite: async (eventId, ownerId) => {
+    const user = auth.currentUser;
+    if (!user?.email) return false;
+
+    const eventRef = doc(db, 'users', ownerId, 'events', eventId);
+    const snap = await getDoc(eventRef);
+    if (!snap.exists()) return false;
+
+    const event = normalizeEvent(snap.data() as Record<string, unknown>);
+    const email = user.email.toLowerCase();
+    const members = [...(event.members || [])];
+    const idx = members.findIndex(m => m.email.toLowerCase() === email);
+    if (idx === -1) return false;
+
+    members[idx] = { ...members[idx], uid: user.uid };
+    const memberUids = [...new Set([...(event.memberUids || []), user.uid])];
+    const editorUids = [...(event.editorUids || [])];
+    const role = members[idx].role;
+    if ((role === 'editor' || role === 'owner') && !editorUids.includes(user.uid)) {
+      editorUids.push(user.uid);
+    }
+
+    const updated: EventData = {
+      ...event,
+      ownerId: event.ownerId || ownerId,
+      members,
+      memberUids,
+      editorUids,
+    };
+
+    await setDoc(eventRef, updated, { merge: true } as any);
+    await setDoc(
+      doc(db, 'eventMemberships', user.uid, 'refs', eventId),
+      { ownerId, role, eventName: event.name, invitedAt: new Date().toISOString() },
+      { merge: true } as any
+    );
+
+    if (get().currentEvent?.id === eventId) {
+      set({ currentEvent: updated });
+    }
+    return true;
+  },
+
   clearCurrentEvent: () => set({ currentEvent: null }),
 
   loadUserEvents: async () => {
     const user = auth.currentUser;
     if (!user) return [];
-    const eventsCol = collection(db, 'users', user.uid, 'events');
-    const snapshot = await getDocs(eventsCol);
+
     const evts: EventData[] = [];
-    snapshot.forEach(docSnap => evts.push(normalizeEvent(docSnap.data() as Record<string, unknown>)));
+    const seen = new Set<string>();
+
+    const ownCol = collection(db, 'users', user.uid, 'events');
+    const ownSnap = await getDocs(ownCol);
+    ownSnap.forEach(docSnap => {
+      const evt = normalizeEvent(docSnap.data() as Record<string, unknown>);
+      evt.ownerId = evt.ownerId || user.uid;
+      evts.push(evt);
+      seen.add(evt.id);
+    });
+
+    const membershipCol = collection(db, 'eventMemberships', user.uid, 'refs');
+    const membershipSnap = await getDocs(membershipCol);
+    for (const memDoc of membershipSnap.docs) {
+      const { ownerId } = memDoc.data() as { ownerId: string };
+      const eventId = memDoc.id;
+      if (seen.has(eventId)) continue;
+      const sharedRef = doc(db, 'users', ownerId, 'events', eventId);
+      const sharedSnap = await getDoc(sharedRef);
+      if (sharedSnap.exists()) {
+        const evt = normalizeEvent(sharedSnap.data() as Record<string, unknown>);
+        evt.ownerId = evt.ownerId || ownerId;
+        evts.push(evt);
+        seen.add(eventId);
+      }
+    }
+
     set({ events: evts });
     return evts;
   },
@@ -500,9 +741,13 @@ export const useEventStore = create<EventStore>((set, get) => ({
       simulations: [],
       liveUpdates: [],
       agentActions: [],
-      // Copy contacts if requested (editable after duplication)
       picContacts: overrides.copyContacts ? (source.picContacts ?? []).map(c => ({ ...c, id: `pic-${Date.now()}-${Math.random().toString(36).slice(2,6)}` })) : [],
       externalContacts: overrides.copyContacts ? (source.externalContacts ?? []).map(c => ({ ...c, id: `ext-${Date.now()}-${Math.random().toString(36).slice(2,6)}` })) : [],
+      ownerId: user?.uid,
+      members: user ? [{ uid: user.uid, email: user.email || '', role: 'owner' as const, invitedAt: now }] : [],
+      memberUids: user ? [user.uid] : [],
+      editorUids: user ? [user.uid] : [],
+      commsLog: [],
       createdAt: now,
     };
 

@@ -240,6 +240,11 @@ export default function SignInPage() {
 
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
                 <InputField id="email"    label="Email Address"   type="email"    placeholder="budi@runit.app"   value={email}    onChange={setEmail}    icon={Mail} />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-0.5rem' }}>
+                  <Link href="/auth/forgot-password" style={{ fontSize: 'var(--text-body-sm)', color: 'var(--color-text-muted)', textDecoration: 'underline' }}>
+                    Forgot password?
+                  </Link>
+                </div>
                 <InputField id="password" label="Password"        type="password" placeholder=""                 value={password} onChange={setPassword} icon={Lock} />
 
                 <button

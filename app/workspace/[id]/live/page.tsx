@@ -1,6 +1,8 @@
 'use client';
 
 import { apiFetch } from '@/lib/api-fetch';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEventStore } from '@/store/eventStore';
@@ -259,6 +261,8 @@ const nodeTypes = { taskNode: TaskNode };
 // ── Main Control Room ────────────────────────────────────────────────────────
 
 export default function ControlRoomPage() {
+  const params = useParams();
+  const workspaceId = typeof params?.id === 'string' ? params.id : '';
   const {
     currentEvent, initializeExecution, updateDagTask,
     applyPropagationResult, setActiveIncident, applyMitigationOption,
@@ -570,8 +574,19 @@ export default function ControlRoomPage() {
           </div>
         </div>
 
-        {/* Crisis injection button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link
+            href={`/workspace/${workspaceId}/incident`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.45rem 0.9rem', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
+              textDecoration: 'none', color: 'var(--color-red)',
+              background: 'rgba(255,99,105,0.08)', border: '1px solid rgba(255,99,105,0.3)',
+            }}
+          >
+            <AlertTriangle size={14} />
+            Incident Response
+          </Link>
           {incident && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem',

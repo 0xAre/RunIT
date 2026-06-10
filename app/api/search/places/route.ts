@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/require-api-auth';
+import { canUseGoogleMapsServer, getServerMapsKey } from '@/lib/google-maps-config';
 
 /* ── Types ──────────────────────────────────────────────────── */
 export interface OsmPlace {
@@ -56,12 +57,28 @@ const GOOGLE_PLACE_TYPES: Record<string, string[]> = {
   ],
 };
 
+function resolveReferer(req: NextRequest): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (siteUrl) {
+    return siteUrl.endsWith('/') ? siteUrl : `${siteUrl}/`;
+  }
+  const origin = req.headers.get('origin') ?? req.headers.get('referer');
+  if (origin) {
+    try {
+      return `${new URL(origin).origin}/`;
+    } catch {
+      // fall through to localhost default
+    }
+  }
+  return 'http://localhost:3000/';
+}
+
 /* ── Google Places Nearby Search (API v1) ────────────────── */
 async function searchGooglePlaces(
-  lat: number, lng: number, radiusM: number, category: string, limit: number
+  lat: number, lng: number, radiusM: number, category: string, limit: number, referer: string
 ): Promise<OsmPlace[]> {
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) throw new Error('No GOOGLE_MAPS_API_KEY');
+  const key = getServerMapsKey();
+  if (!key) throw new Error('No server Google Maps API key');
 
   const includedTypes = GOOGLE_PLACE_TYPES[category] || GOOGLE_PLACE_TYPES.vendor;
   const radiusCapped = Math.min(radiusM, 50000); // Google max 50km
@@ -82,7 +99,7 @@ async function searchGooglePlaces(
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': key,
-      'Referer': 'http://localhost:3000/', // Match the allowed referer from the Google Cloud Console
+      'Referer': referer,
       'X-Goog-FieldMask': [
         'places.id',
         'places.displayName',
@@ -354,21 +371,25 @@ export async function POST(req: NextRequest) {
     let places: OsmPlace[] = [];
     let source = 'google-places';
 
-    const hasGoogleKey = !!process.env.GOOGLE_MAPS_API_KEY;
-    
-    // Fetch places from Google or OSM
     try {
-      if (hasGoogleKey) {
-        places = await searchGooglePlaces(lat, lng, radiusKm * 1000, category, limit);
-        console.log(`[Search Places] Google: ${places.length} results for ${category}`);
-      } else {
-        throw new Error('No Google key');
-      }
-    } catch (gErr) {
-      console.warn(`[Search Places] Google Places failed, falling back to OSM:`, gErr);
-      source = 'openstreetmap';
       places = await searchOsmPlaces(lat, lng, radiusKm, category, limit);
+      source = 'openstreetmap-overpass';
       console.log(`[Search Places] OSM: ${places.length} results for ${category}`);
+    } catch (osmErr) {
+      console.warn('[Search Places] OSM failed:', osmErr);
+      places = [];
+    }
+
+    const referer = resolveReferer(req);
+
+    if (!places.length && canUseGoogleMapsServer()) {
+      try {
+        places = await searchGooglePlaces(lat, lng, radiusKm * 1000, category, limit, referer);
+        source = 'google-places';
+        console.log(`[Search Places] Google: ${places.length} results for ${category}`);
+      } catch (gErr) {
+        console.warn('[Search Places] Google Places failed:', gErr);
+      }
     }
 
     // Fetch recommendations from You.com in parallel (no await blocking the main places if we don't want to, but we await here for simplicity)

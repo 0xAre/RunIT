@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { OsmPlace } from '@/app/api/search/places/route';
 import type { MapMarker } from '@/components/MapComponent';
+import type { LocationSuggestion } from '@/lib/location-search';
 
 /* Lazy-load map to avoid SSR */
 const MapComponent = dynamic(() => import('@/components/MapComponent'), {
@@ -39,7 +40,7 @@ async function geocodeSearch(query: string): Promise<{ lat: number; lng: number;
     try {
       const geocoder = new (window as any).google.maps.Geocoder();
       const res: any = await new Promise((resolve, reject) => {
-        geocoder.geocode({ address: query }, (results: any, status: any) => {
+        geocoder.geocode({ address: query, componentRestrictions: { country: 'id' } }, (results: any, status: any) => {
           if (status === 'OK') resolve(results);
           else reject(status);
         });
@@ -57,7 +58,6 @@ async function geocodeSearch(query: string): Promise<{ lat: number; lng: number;
     }
   }
 
-  // Fallback to OSM API
   try {
     const res = await apiFetch('/api/search/geocode', {
       method: 'POST',
@@ -65,8 +65,33 @@ async function geocodeSearch(query: string): Promise<{ lat: number; lng: number;
       body: JSON.stringify({ query }),
     });
     const data = await res.json();
-    return data.primary || null;
+    return data.primary || data.results?.[0] || null;
   } catch { return null; }
+}
+
+async function fetchAutocompleteSuggestions(input: string): Promise<LocationSuggestion[]> {
+  try {
+    const res = await apiFetch('/api/search/autocomplete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input }),
+    });
+    const data = await res.json();
+    return data.predictions || [];
+  } catch {
+    return [];
+  }
+}
+
+async function resolveSuggestion(suggestion: LocationSuggestion): Promise<{ lat: number; lng: number; displayName: string } | null> {
+  if (suggestion.lat !== undefined && suggestion.lng !== undefined) {
+    return {
+      lat: suggestion.lat,
+      lng: suggestion.lng,
+      displayName: suggestion.description,
+    };
+  }
+  return geocodeSearch(suggestion.description);
 }
 
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
@@ -139,7 +164,7 @@ export default function VenuePickerMap({
   const [youResults, setYouResults] = useState<any[]>([]);
   
   // Autocomplete state
-  const [autocompleteResults, setAutocompleteResults] = useState<any[]>([]);
+  const [autocompleteResults, setAutocompleteResults] = useState<LocationSuggestion[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [, setMapsLoaded] = useState(false);
@@ -208,96 +233,75 @@ export default function VenuePickerMap({
     
     debounceRef.current = setTimeout(async () => {
       setQueryLoading(true);
-      if (typeof window !== 'undefined' && (window as any).google?.maps?.places) {
-        try {
-          if ((window as any).google.maps.places.AutocompleteSuggestion) {
-            // New Places API (Post March 2025 requirement)
-            const request = {
-              input: val,
-              includedRegionCodes: ['id'],
-              language: 'id',
-            };
-            const { suggestions } = await (window as any).google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
-            setQueryLoading(false);
-            if (suggestions && suggestions.length > 0) {
-              const formatted = suggestions.map((s: any) => {
-                const p = s.placePrediction;
-                return {
-                  placeId: p.placeId,
-                  description: p.text?.text || '',
-                  mainText: p.mainText?.text || p.text?.text || '',
-                  secondaryText: p.secondaryText?.text || '',
-                };
-              });
-              setAutocompleteResults(formatted);
-              setShowAutocomplete(true);
-            } else {
-              setAutocompleteResults([]);
-              setShowAutocomplete(false);
-            }
-          } else {
-            // Legacy fallback just in case
-            const autocompleteService = new (window as any).google.maps.places.AutocompleteService();
-            autocompleteService.getPlacePredictions(
-              { input: val, componentRestrictions: { country: 'id' }, language: 'id' },
-              (predictions: any, status: any) => {
-                setQueryLoading(false);
-                if (status === 'OK' && predictions) {
-                  const formatted = predictions.map((p: any) => ({
-                    placeId: p.place_id,
-                    description: p.description,
-                    mainText: p.structured_formatting?.main_text || p.description,
-                    secondaryText: p.structured_formatting?.secondary_text || '',
-                  }));
-                  setAutocompleteResults(formatted);
-                  setShowAutocomplete(true);
-                } else {
-                  setAutocompleteResults([]);
-                  setShowAutocomplete(false);
-                }
-              }
-            );
-          }
-        } catch (e: any) {
-          setQueryLoading(false);
-          console.error('Autocomplete error', e);
-          if (e.message?.includes('RefererNotAllowedMapError') || String(e).includes('RefererNotAllowedMapError')) {
-            setSearchError('Error API Key: Website belum didaftarkan di Google Cloud (RefererNotAllowedMapError).');
-          }
-        }
-      } else {
-        // Google maps not loaded, fallback to our old endpoint if we want, or just wait.
-        // I will fallback to old endpoint just in case it works for some reason.
-        try {
-          const res = await apiFetch('/api/search/autocomplete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ input: val }),
-          });
-          const data = await res.json();
-          if (data.predictions) {
-            setAutocompleteResults(data.predictions);
-            setShowAutocomplete(true);
-          }
-        } catch (e) {
-          console.error('Autocomplete fallback error', e);
-        } finally {
-          setQueryLoading(false);
-        }
+      setSearchError('');
+      try {
+        const predictions = await fetchAutocompleteSuggestions(val);
+        setAutocompleteResults(predictions);
+        setShowAutocomplete(predictions.length > 0);
+      } catch (e) {
+        console.error('Autocomplete error', e);
+        setAutocompleteResults([]);
+        setShowAutocomplete(false);
+      } finally {
+        setQueryLoading(false);
       }
-    }, 400);
+    }, 300);
   };
 
-  const handleSelectAutocomplete = async (description: string) => {
+  const applySearchResult = (result: { lat: number; lng: number; displayName: string }) => {
+    setCenter([result.lat, result.lng]);
+    setAddressLabel(result.displayName);
+    setSearchQuery('');
+    setAutocompleteResults([]);
     setShowAutocomplete(false);
-    setSearchQuery(description);
+    setSearchError('');
+  };
+
+  const runLocationSearch = async (rawQuery: string) => {
+    const query = rawQuery.trim();
+    if (!query) return;
+
     setQueryLoading(true);
-    const result = await geocodeSearch(description);
+    setSearchError('');
+
+    let suggestions = autocompleteResults;
+    if (!suggestions.length) {
+      suggestions = await fetchAutocompleteSuggestions(query);
+      setAutocompleteResults(suggestions);
+    }
+
+    if (suggestions.length > 0) {
+      const best = suggestions[0];
+      const resolved = await resolveSuggestion(best);
+      setQueryLoading(false);
+      if (resolved) {
+        applySearchResult(resolved);
+        return;
+      }
+    }
+
+    const direct = await geocodeSearch(query.includes('indonesia') ? query : `${query}, Indonesia`);
+    setQueryLoading(false);
+    if (direct) {
+      applySearchResult(direct);
+      return;
+    }
+
+    setSearchError('Lokasi tidak ditemukan. Pilih salah satu rekomendasi di bawah atau coba tambahkan kota (mis. Jakarta).');
+    setShowAutocomplete(suggestions.length > 0);
+  };
+
+  const handleSelectAutocomplete = async (suggestion: LocationSuggestion) => {
+    setShowAutocomplete(false);
+    setSearchQuery(suggestion.description);
+    setQueryLoading(true);
+    setSearchError('');
+    const result = await resolveSuggestion(suggestion);
     setQueryLoading(false);
     if (result) {
-      setCenter([result.lat, result.lng]);
-      setAddressLabel(result.displayName);
-      setSearchQuery('');
+      applySearchResult(result);
+    } else {
+      setSearchError('Gagal memuat lokasi. Coba pilih rekomendasi lain.');
     }
   };
 
@@ -362,24 +366,11 @@ export default function VenuePickerMap({
             onKeyDown={async e => {
               if (e.key === 'Enter' && searchQuery.trim()) {
                 if (debounceRef.current) clearTimeout(debounceRef.current);
-                setQueryLoading(true);
-                setSearchError('');
-                let queryToGeocode = searchQuery.trim();
-                if (showAutocomplete && autocompleteResults.length > 0) {
-                    queryToGeocode = autocompleteResults[0].description;
-                    setShowAutocomplete(false);
-                }
-                const result = await geocodeSearch(queryToGeocode);
-                setQueryLoading(false);
-                if (result) {
-                  setCenter([result.lat, result.lng]);
-                  setAddressLabel(result.displayName);
-                  setSearchQuery('');
-                  setAutocompleteResults([]);
-                } else {
-                  setSearchError('Lokasi tidak ditemukan. Coba kata kunci lain.');
-                }
+                await runLocationSearch(searchQuery);
               }
+            }}
+            onFocus={() => {
+              if (autocompleteResults.length > 0) setShowAutocomplete(true);
             }}
             placeholder="Ketik lokasi (Gedung SMESCO)..."
             style={{
@@ -391,25 +382,7 @@ export default function VenuePickerMap({
           />
           <button onClick={async () => {
              if (debounceRef.current) clearTimeout(debounceRef.current);
-             if (searchQuery.trim()) {
-                 setQueryLoading(true);
-                 setSearchError('');
-                 let queryToGeocode = searchQuery.trim();
-                 if (showAutocomplete && autocompleteResults.length > 0) {
-                     queryToGeocode = autocompleteResults[0].description;
-                     setShowAutocomplete(false);
-                 }
-                 const result = await geocodeSearch(queryToGeocode);
-                 setQueryLoading(false);
-                 if (result) {
-                   setCenter([result.lat, result.lng]);
-                   setAddressLabel(result.displayName);
-                   setSearchQuery('');
-                   setAutocompleteResults([]);
-                 } else {
-                   setSearchError('Lokasi tidak ditemukan. Coba kata kunci lain.');
-                 }
-             }
+             if (searchQuery.trim()) await runLocationSearch(searchQuery);
           }} style={{ position: 'absolute', right: '0.3rem', background: '#7C6AF5', color: '#fff', border: 'none', borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             {queryLoading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : 'Cari'}
           </button>
@@ -430,8 +403,8 @@ export default function VenuePickerMap({
               >
                 {autocompleteResults.map((res, i) => (
                   <button
-                    key={res.placeId || i}
-                    onClick={() => handleSelectAutocomplete(res.description)}
+                    key={res.placeId || `${res.description}-${i}`}
+                    onClick={() => handleSelectAutocomplete(res)}
                     style={{
                       width: '100%', padding: '0.6rem 0.875rem', textAlign: 'left',
                       background: 'transparent', border: 'none', borderBottom: i < autocompleteResults.length - 1 ? '1px solid var(--color-border)' : 'none',
@@ -441,9 +414,9 @@ export default function VenuePickerMap({
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
                     <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{res.mainText}</span>
-                    {res.secondaryText && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>{res.secondaryText}</span>
-                    )}
+                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', lineHeight: 1.35 }}>
+                      {res.secondaryText || res.description}
+                    </span>
                   </button>
                 ))}
               </motion.div>

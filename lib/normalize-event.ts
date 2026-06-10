@@ -21,5 +21,10 @@ export function normalizeEvent(raw: Record<string, unknown>): EventData {
     data.budgetTracker = budgetTracker;
   }
 
+  if (!data.members) data.members = [];
+  if (!data.memberUids) data.memberUids = [];
+  if (!data.editorUids) data.editorUids = [];
+  if (!data.commsLog) data.commsLog = [];
+
   return data as unknown as EventData;
 }

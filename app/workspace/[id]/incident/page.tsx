@@ -3,10 +3,12 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEventStore } from '@/store/eventStore';
 import {
-  AlertTriangle, Zap, CheckCircle, Loader2, Clock, Users, ShieldAlert, FileText, Activity, Globe
+  AlertTriangle, Zap, CheckCircle, Loader2, Clock, Users, ShieldAlert, FileText, Activity, Globe,
+  Radio, RefreshCw, ArrowLeft
 } from 'lucide-react';
 
 interface IncidentResponse {
@@ -50,6 +52,7 @@ export default function IncidentPage() {
   const [incident, setIncident] = useState('');
   const [response, setResponse] = useState<IncidentResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [industrySOP, setIndustrySOP] = useState<IndustrySOP[]>([]);
   const [history, setHistory] = useState<{ incident: string; response: IncidentResponse; time: string }[]>([]);
 
@@ -57,6 +60,7 @@ export default function IncidentPage() {
     if (!incident.trim() || !currentEvent) return;
     setIsLoading(true);
     setResponse(null);
+    setError(null);
 
     try {
       const res = await apiFetch('/api/ai/incident', {
@@ -65,24 +69,16 @@ export default function IncidentPage() {
         body: JSON.stringify({ eventData: currentEvent, incident }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Incident analysis failed');
       if (data.response) {
         setResponse(data.response);
         setIndustrySOP(data.industrySOP ?? []);
         setHistory(prev => [{ incident, response: data.response, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) }, ...prev]);
+      } else {
+        throw new Error('No incident response returned');
       }
     } catch {
-      const mockResponse: IncidentResponse = {
-        immediateActions: [
-          'Secure the area — prioritize safety of all participants',
-          'Notify Core Ops and relevant Division Lead within 2 mins',
-          'Deploy holding statement via MC to prevent panic',
-          'Log incident details for post-event audit',
-        ],
-        affectedDivisions: ['Acara', 'Ops', 'Security'],
-        recommendation: `Incident "${incident}" requires immediate coordinated response. Establish single-point command to avoid conflicting instructions. Prioritize transparent participant communication. After resolution, conduct a 5-min hot wash with PICs to prevent recurrence.`,
-      };
-      setResponse(mockResponse);
-      setHistory(prev => [{ incident, response: mockResponse, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) }, ...prev]);
+      setError('Incident analysis failed. Check GEMINI_API_KEY in .env.local and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -91,19 +87,58 @@ export default function IncidentPage() {
   return (
     <div className="flex flex-col gap-6 md:gap-8 max-w-[1200px] mx-auto p-4 md:p-8">
       {/* Header */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-          <div style={{ padding: '0.5rem', background: 'rgba(255, 99, 105, 0.1)', borderRadius: '8px' }}>
-            <AlertTriangle size={20} color="var(--color-red)" />
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <div style={{ padding: '0.5rem', background: 'rgba(255, 99, 105, 0.1)', borderRadius: '8px' }}>
+              <AlertTriangle size={20} color="var(--color-red)" />
+            </div>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
+              Incident Response
+            </h1>
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
-            Incident Response
-          </h1>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', maxWidth: '600px' }}>
+            Report active incidents. AI will immediately generate an emergency response protocol and mobilization plan.
+          </p>
         </div>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', maxWidth: '600px' }}>
-          Report active incidents. AI will immediately generate an emergency response protocol and mobilization plan.
-        </p>
+        <Link
+          href={`/workspace/${params.id}/live`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600,
+            padding: '0.6rem 1rem', borderRadius: 8, textDecoration: 'none',
+            background: 'rgba(37,208,171,0.1)', border: '1px solid rgba(37,208,171,0.35)', color: 'var(--color-mint)',
+          }}
+        >
+          <ArrowLeft size={14} />
+          <Radio size={14} />
+          Back to Mission Control
+        </Link>
       </div>
+
+      {error && (
+        <div style={{
+          background: 'rgba(255,99,105,0.08)', border: '1px solid rgba(255,99,105,0.35)',
+          borderRadius: 8, padding: '1rem 1.25rem',
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={16} color="var(--color-red)" />
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-red)', margin: 0 }}>{error}</p>
+          </div>
+          <button
+            onClick={handleIncident}
+            disabled={isLoading || !incident.trim()}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              padding: '0.45rem 0.9rem', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600,
+              background: 'var(--color-ground-2)', border: '1px solid var(--color-border)', cursor: 'pointer',
+            }}
+          >
+            <RefreshCw size={13} />
+            Try Again
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left — Input */}

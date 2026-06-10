@@ -8,7 +8,7 @@ import { useEventStore, type SimulationResult } from '@/store/eventStore';
 import {
   Shield, CloudRain, Mic, Zap, Users, AlertTriangle,
   ChevronRight, Play, Loader2, CheckCircle, ArrowRight, Plus, Terminal,
-  Activity, Target, TrendingDown
+  Activity, Target, TrendingDown, Radio, RefreshCw
 } from 'lucide-react';
 import { useLangStore } from '@/store/langStore';
 
@@ -76,38 +76,15 @@ export default function SimulatePage() {
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Simulation request failed');
       if (data.result) {
         setRunningResult(data.result);
         addSimulation(data.result);
+      } else {
+        throw new Error('No simulation result returned');
       }
     } catch {
-      const presetId = selectedScenario;
-      const mockResults: Record<string, SimulationResult> = {
-        speaker: {
-          scenario: 'Speaker No-Show — Keynote speaker cancels or arrives very late',
-          severity: 'critical',
-          impactedAreas: ['Main Stage Program', 'Audience Experience', 'Rundown Flow', 'Media Coverage'],
-          immediateActions: [
-            'Contact backup speaker from standby list immediately',
-            'Announcer inform participants of session delay',
-            'MC transition to networking / coffee break',
-            'Revise emergency rundown with core ops',
-          ],
-          contingencyPlan: [
-            'Activate confirmed backup speaker',
-            'Extend coffee break duration by 30 mins',
-            'Replace slot with impromptu panel discussion',
-            'Coordinate with MC for interactive Q&A filler',
-            'Update participants via social media & announcements',
-          ],
-          timeImpact: 'Estimated Delay: 45-60 mins',
-          affectedDivisions: ['Acara', 'Publikasi', 'MC'],
-        },
-      };
-
-      const result = mockResults[presetId || 'speaker'] || mockResults['speaker'];
-      setRunningResult(result);
-      addSimulation(result);
+      setError('Simulation failed. Check GEMINI_API_KEY in .env.local and try again.');
     } finally {
       setAiLoading(false);
     }
@@ -118,19 +95,59 @@ export default function SimulatePage() {
   return (
     <div className="flex flex-col gap-6 md:gap-8 max-w-[1200px] mx-auto p-4 md:p-8">
       {/* Header */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-          <div style={{ padding: '0.5rem', background: 'var(--color-ground-2)', borderRadius: '8px' }}>
-            <Shield size={20} color="var(--color-mint)" />
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <div style={{ padding: '0.5rem', background: 'var(--color-ground-2)', borderRadius: '8px' }}>
+              <Shield size={20} color="var(--color-mint)" />
+            </div>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
+              Simulation Engine
+            </h1>
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
-            Simulation Engine
-          </h1>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', maxWidth: '600px' }}>
+            Simulate operational disruptions to test event resilience and generate contingency plans.
+          </p>
         </div>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', maxWidth: '600px' }}>
-          Simulate operational disruptions to test event resilience and generate contingency plans.
-        </p>
+        <button
+          onClick={() => router.push(`/workspace/${params.id}/live`)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 700,
+            padding: '0.6rem 1rem', borderRadius: 8, cursor: 'pointer',
+            background: 'rgba(255,99,105,0.1)', border: '1px solid rgba(255,99,105,0.35)', color: 'var(--color-red)',
+          }}
+        >
+          <Radio size={15} />
+          Open Mission Control
+          <ArrowRight size={14} />
+        </button>
       </div>
+
+      {error && (
+        <div style={{
+          background: 'var(--color-error-bg, rgba(255,99,105,0.08))',
+          border: '1px solid var(--color-error-border, rgba(255,99,105,0.35))',
+          borderRadius: 8, padding: '1rem 1.25rem',
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={16} color="var(--color-red)" />
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-red)', margin: 0 }}>{error}</p>
+          </div>
+          <button
+            onClick={runSimulation}
+            disabled={isAiLoading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              padding: '0.45rem 0.9rem', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600,
+              background: 'var(--color-ground-2)', border: '1px solid var(--color-border)', cursor: 'pointer',
+            }}
+          >
+            <RefreshCw size={13} />
+            Try Again
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left panel — scenario selector */}
@@ -389,11 +406,11 @@ export default function SimulatePage() {
                     <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
                       <button
                         className="btn-primary"
-                        onClick={() => router.push(`/workspace/${params.id}/execution`)}
+                        onClick={() => router.push(`/workspace/${params.id}/live`)}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', padding: '0.75rem 1.25rem' }}
                       >
-                        <Target size={16} />
-                        Open Control Room
+                        <Radio size={16} />
+                        Open Mission Control
                         <ArrowRight size={16} />
                       </button>
                     </div>

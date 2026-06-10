@@ -14,7 +14,7 @@ import {
   Clock, AlertTriangle, CheckCircle2, Circle, ArrowRight,
   Plus, Trash2, GripVertical, Download, MapPin, Users,
   Zap, Target, RefreshCw, Building2, ChevronRight, Sparkles,
-  TrendingUp, Brain, Activity, DollarSign,
+  TrendingUp, Brain, Activity, DollarSign, Radio,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -25,11 +25,12 @@ const PlaceActionCard = dynamic(() => import('@/components/PlaceActionCard'), { 
 const AiTaskAssistModal = dynamic(() => import('@/components/AiTaskAssistModal'), { ssr: false });
 const VoiceCopilot = dynamic(() => import('@/components/VoiceCopilot'), { ssr: false });
 const LiveTimelineAdjuster = dynamic(() => import('@/components/LiveTimelineAdjuster'), { ssr: false });
+const CommsPanel = dynamic(() => import('@/components/CommsPanel'), { ssr: false });
 import type { TimelineItem as LiveTimelineItem } from '@/components/LiveTimelineAdjuster';
 import type { OsmPlace } from '@/app/api/search/places/route';
 
 /* ── Types ───────────────────────────────────────────────── */
-type Tab = 'tasks' | 'rundown' | 'confirm' | 'progress';
+type Tab = 'tasks' | 'rundown' | 'confirm' | 'comms' | 'progress';
 interface RundownItem { id: string; time: string; activity: string; pic: string; notes: string; }
 interface ChatMsg { role: 'user' | 'assistant'; content: string; }
 
@@ -848,7 +849,7 @@ function ProgressTab({ divisions, timeline, risks }: { divisions: Division[]; ti
 
 /* ── Main Execution Page ─────────────────────────────────── */
 export default function ExecutionPage() {
-  const { currentEvent, updateEventStage, saveCurrentEvent, updateTaskResolution } = useEventStore();
+  const { currentEvent, updateEventStage, saveCurrentEvent, updateTaskResolution, updateMasterPlan, classifyAllTasks: storeClassify } = useEventStore();
   const { lang } = useLangStore();
   const router = useRouter();
   const params = useParams();
@@ -992,6 +993,64 @@ export default function ExecutionPage() {
   const [autoPilotRunning, setAutoPilotRunning] = useState(false);
   const [autoPilotResults, setAutoPilotResults] = useState<Array<{ taskId: string; taskTitle: string; autoResolved: boolean; needsApproval: boolean; reason: string }> | null>(null);
   const [showAutoPilotResults, setShowAutoPilotResults] = useState(false);
+  const [classifying, setClassifying] = useState(false);
+  const [revising, setRevising] = useState(false);
+
+  const autoClassifyTasks = useCallback(async () => {
+    if (!currentEvent?.masterPlan) return;
+    const allTasks = currentEvent.masterPlan.divisions.flatMap(d =>
+      d.tasks.map(t => ({ id: t.id, title: t.title, description: t.description }))
+    );
+    if (!allTasks.length) return;
+
+    setClassifying(true);
+    try {
+      const res = await apiFetch('/api/ai/classify-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tasks: allTasks, eventData: currentEvent }),
+      });
+      if (res.ok) {
+        const { classifications } = await res.json();
+        storeClassify(classifications);
+      }
+    } catch { /* non-blocking */ } finally {
+      setClassifying(false);
+    }
+  }, [currentEvent, storeClassify]);
+
+  const handleRevisePlan = useCallback(async () => {
+    if (!currentEvent?.masterPlan) return;
+    const description = window.prompt(
+      'Jelaskan perubahan besar yang memerlukan re-sync plan:',
+      `Venue: ${currentEvent.venue} | Timeline: ${currentEvent.timeline}`
+    );
+    if (!description?.trim()) return;
+
+    setRevising(true);
+    try {
+      const res = await apiFetch('/api/ai/revise-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          masterPlan: currentEvent.masterPlan,
+          eventData: currentEvent,
+          delta: { description, changes: { venue: currentEvent.venue, timeline: currentEvent.timeline, budget: currentEvent.budget } },
+          lang,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const { revisedMasterPlan } = await res.json();
+      updateMasterPlan(revisedMasterPlan);
+      saveCurrentEvent();
+      await autoClassifyTasks();
+      alert('Master plan berhasil di-sync ulang oleh AI.');
+    } catch {
+      alert('Gagal re-sync plan. Periksa koneksi atau API key.');
+    } finally {
+      setRevising(false);
+    }
+  }, [currentEvent, lang, updateMasterPlan, saveCurrentEvent, autoClassifyTasks]);
 
   const handleAutoPilot = useCallback(async () => {
     if (pendingTasks.length === 0) return;
@@ -1078,6 +1137,12 @@ export default function ExecutionPage() {
     }
   }, [currentEvent?.id, updateEventStage]);
 
+  useEffect(() => {
+    if (!currentEvent?.masterPlan) return;
+    const uncategorized = currentEvent.masterPlan.divisions.flatMap(d => d.tasks).some(t => !t.category);
+    if (uncategorized && !classifying) autoClassifyTasks();
+  }, [currentEvent?.id, currentEvent?.masterPlan?.divisions.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!currentEvent) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -1090,6 +1155,7 @@ export default function ExecutionPage() {
     { id: 'tasks',    label: '📋 Task Board',       icon: KanbanSquare, color: 'var(--color-mint)' },
     { id: 'rundown',  label: '📅 Rundown Builder',  icon: Calendar,     color: '#FBBF24' },
     { id: 'confirm',  label: '✅ Konfirmasi',       icon: CheckSquare,  color: '#7C6AF5' },
+    { id: 'comms',    label: '💬 Comms',            icon: MessageCircle, color: '#25D366' },
     { id: 'progress', label: '📊 Progress',         icon: BarChart2,    color: '#00ADB5' },
   ];
 
@@ -1112,12 +1178,26 @@ export default function ExecutionPage() {
             </div>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>{currentEvent.name} · {currentEvent.type} · {allTasks.length} tasks</p>
           </div>
-          {!currentEvent.masterPlan && (
-            <button onClick={() => router.push(`/workspace/${params.id}/master-plan`)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-              <Zap size={13} /> Generate Master Plan Dulu
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {!currentEvent.masterPlan && (
+              <button onClick={() => router.push(`/workspace/${params.id}/master-plan`)}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                <Zap size={13} /> Generate Master Plan Dulu
+              </button>
+            )}
+            <button
+              onClick={() => router.push(`/workspace/${params.id}/live`)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: 8,
+                background: 'rgba(255,99,105,0.1)', border: '1px solid rgba(255,99,105,0.35)', color: 'var(--color-red)',
+                fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              <Radio size={13} />
+              Open Mission Control
+              <ArrowRight size={13} />
             </button>
-          )}
+          </div>
         </div>
 
         {/* ── AI Task Overview ────────────────────────────── */}
@@ -1186,6 +1266,32 @@ export default function ExecutionPage() {
                 )}
               </button>
             )}
+            <button
+              onClick={autoClassifyTasks}
+              disabled={classifying}
+              style={{
+                padding: '0.5rem 0.75rem', borderRadius: 8, cursor: classifying ? 'not-allowed' : 'pointer',
+                background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', color: '#FBBF24',
+                fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem',
+                opacity: classifying ? 0.7 : 1,
+              }}
+            >
+              {classifying ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Sparkles size={13} />}
+              {classifying ? 'Classifying...' : 'Classify'}
+            </button>
+            <button
+              onClick={handleRevisePlan}
+              disabled={revising}
+              style={{
+                padding: '0.5rem 0.75rem', borderRadius: 8, cursor: revising ? 'not-allowed' : 'pointer',
+                background: 'rgba(0,173,181,0.08)', border: '1px solid rgba(0,173,181,0.3)', color: '#00ADB5',
+                fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem',
+                opacity: revising ? 0.7 : 1,
+              }}
+            >
+              {revising ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={13} />}
+              {revising ? 'Re-syncing...' : 'AI Re-sync Plan'}
+            </button>
             {/* Auto-Pilot button */}
             {pendingTasks.length > 0 && (
               <button
@@ -1314,6 +1420,11 @@ export default function ExecutionPage() {
             {activeTab === 'confirm' && (
               <motion.div key="confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ height: '100%' }}>
                 <ConfirmTab currentEvent={currentEvent} />
+              </motion.div>
+            )}
+            {activeTab === 'comms' && (
+              <motion.div key="comms" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ height: '100%' }}>
+                <CommsPanel event={currentEvent} />
               </motion.div>
             )}
             {activeTab === 'progress' && (

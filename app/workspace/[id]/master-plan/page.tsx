@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEventStore, type MasterPlan } from '@/store/eventStore';
-import { classifyAllTasks, CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/task-agents';
+import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/task-agents';
 import {
   Brain, Zap, Users, Calendar, DollarSign, AlertTriangle,
   CheckCircle, Clock, ChevronRight, RefreshCw, Play, ArrowRight,
@@ -215,6 +215,8 @@ export default function MasterPlanPage() {
   const [editableSummary, setEditableSummary] = useState('');
   const [classifiedCount, setClassifiedCount] = useState(0);
   const [classifying, setClassifying] = useState(false);
+  const [revising, setRevising] = useState(false);
+  const [revisionSummary, setRevisionSummary] = useState<string | null>(null);
 
   const masterPlan = currentEvent?.masterPlan;
   const isSmallEvent = !forceFullView && (
@@ -231,15 +233,63 @@ export default function MasterPlanPage() {
 
     setClassifying(true);
     try {
-      const classifications = classifyAllTasks(allTasks, currentEvent);
-      storeClassify(classifications);
-      setClassifiedCount(classifications.filter(c => c.category !== 'internal').length);
+      const res = await apiFetch('/api/ai/classify-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tasks: allTasks, eventData: currentEvent }),
+      });
+      if (res.ok) {
+        const { classifications } = await res.json();
+        storeClassify(classifications);
+        setClassifiedCount(classifications.filter((c: { category: string }) => c.category !== 'internal').length);
+      }
     } catch {
       // Non-blocking
     } finally {
       setClassifying(false);
     }
   }, [currentEvent, storeClassify]);
+
+  const handleRevisePlan = async () => {
+    if (!currentEvent?.masterPlan) return;
+    const description = window.prompt(
+      'Jelaskan perubahan besar (venue, tanggal, budget, dll):',
+      `Venue: ${currentEvent.venue} | Timeline: ${currentEvent.timeline} | Budget: ${currentEvent.budget}`
+    );
+    if (!description?.trim()) return;
+
+    setRevising(true);
+    setRevisionSummary(null);
+    try {
+      const res = await apiFetch('/api/ai/revise-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          masterPlan: currentEvent.masterPlan,
+          eventData: currentEvent,
+          delta: {
+            description,
+            changes: {
+              venue: currentEvent.venue,
+              timeline: currentEvent.timeline,
+              budget: currentEvent.budget,
+              participants: currentEvent.participants,
+            },
+          },
+          lang: useLangStore.getState().lang,
+        }),
+      });
+      if (!res.ok) throw new Error('Revision failed');
+      const { diff, revisedMasterPlan } = await res.json();
+      updateMasterPlan(revisedMasterPlan);
+      setRevisionSummary(diff.summary);
+      autoClassifyTasks(revisedMasterPlan);
+    } catch {
+      setRevisionSummary('Gagal melakukan re-sync plan. Coba lagi.');
+    } finally {
+      setRevising(false);
+    }
+  };
 
   const generateMasterPlan = async () => {
     if (!currentEvent) return;
@@ -270,45 +320,8 @@ export default function MasterPlanPage() {
         updateEventStage('masterplan');
         autoClassifyTasks(masterPlan);
       }
-    } catch (err) {
-      setAiError('Failed to generate master plan. Showing demo master plan.');
-      // Demo mock masterPlan
-      const mockMasterPlan: MasterPlan = {
-        eventName: currentEvent.name,
-        eventType: currentEvent.type,
-        summary: `${currentEvent.name} is a ${currentEvent.scale} scale ${currentEvent.type} designed for ${currentEvent.audience}. Target: ${currentEvent.participants} participants. Cross-division coordination required.`,
-        operationalPhases: ['Pre-Production (H-90 to H-30)', 'Production (H-30 to H-7)', 'Execution Prep (H-7 to H-1)', 'Event Day (H)', 'Post-Event (H+1 to H+7)'],
-        divisions: [
-          { id: 'div-1', name: 'Core Operations', pic: 'Jane Doe', color: 'var(--color-mint)', tasks: [
-            { id: 't1', title: 'Rundown Assembly', description: 'Compile all timelines into master sheet', deadline: 'H-14', priority: 'critical', status: 'pending', dependencies: [], divisionId: 'div-1' },
-            { id: 't2', title: 'Technical Rehearsal', description: 'Full dry run with all teams', deadline: 'H-1', priority: 'high', status: 'pending', dependencies: ['t1'], divisionId: 'div-1' },
-          ]},
-          { id: 'div-2', name: 'Logistics', pic: 'John Smith', color: 'var(--color-amber)', tasks: [
-            { id: 't9', title: 'Venue Booking', description: 'Secure primary and backup venue', deadline: 'H-60', priority: 'critical', status: 'pending', dependencies: [], divisionId: 'div-2' },
-          ]},
-        ],
-        timeline: [
-          { date: 'H-90', milestone: 'Kick-off', phase: 'Pre-Production', responsible: 'Core Team' },
-          { date: 'H-60', milestone: 'Venue Finalized', phase: 'Pre-Production', responsible: 'Logistics' },
-          { date: 'H-1', milestone: 'Technical Rehearsal', phase: 'Execution Prep', responsible: 'All' },
-          { date: 'H-Day', milestone: 'Execution', phase: 'Event Day', responsible: 'All' },
-        ],
-        manpowerEstimate: `Estimated ${Math.round(currentEvent.participants * 0.05)} core crew, ${Math.round(currentEvent.participants * 0.1)} volunteers.`,
-        budgetAllocation: [
-          { category: 'Venue', estimate: '$5,000', percentage: 40 },
-          { category: 'Operations', estimate: '$2,000', percentage: 20 },
-        ],
-        criticalPath: [
-          'Venue Booking → Speaker Confirmation → Rundown → Rehearsal',
-        ],
-        risks: [
-          { id: 'r1', scenario: 'Key speaker cancels', severity: 'high', probability: 'medium', mitigation: 'Backup speaker standby list' },
-          { id: 'r2', scenario: 'Power failure', severity: 'critical', probability: 'low', mitigation: 'Genset testing on H-1' },
-        ],
-      };
-      updateMasterPlan(mockMasterPlan);
-      updateEventDataLanguage(lang);
-      updateEventStage('masterplan');
+    } catch {
+      setAiError('Failed to generate master plan. Check GEMINI_API_KEY in .env.local and try again.');
     } finally {
       setAiLoading(false);
     }
@@ -323,6 +336,15 @@ export default function MasterPlanPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEvent?.id, masterPlan?.summary]);
+
+  useEffect(() => {
+    if (!masterPlan || !currentEvent) return;
+    const hasCategories = masterPlan.divisions.some(d => d.tasks.some(t => t.category));
+    if (!hasCategories && !classifying) {
+      autoClassifyTasks();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEvent?.id, masterPlan?.divisions.length]);
 
 
   // ── Express Mode: generate (if needed) then go to execution ──
@@ -355,8 +377,12 @@ export default function MasterPlanPage() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: '1rem' }}>
         {aiError && (
-          <div style={{ background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)', padding: '1rem', color: 'var(--color-red)', borderRadius: '8px' }}>
-            <p style={{ fontSize: '0.85rem' }}>{aiError}</p>
+          <div style={{ background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)', padding: '1rem', color: 'var(--color-red)', borderRadius: '8px', maxWidth: 480, textAlign: 'center' }}>
+            <p style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}>{aiError}</p>
+            <button className="btn-primary" onClick={generateMasterPlan} style={{ fontSize: '0.85rem' }}>
+              <RefreshCw size={14} style={{ marginRight: '0.35rem' }} />
+              Try Again
+            </button>
           </div>
         )}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -392,7 +418,13 @@ export default function MasterPlanPage() {
 
   return (
     <div className="flex flex-col gap-6 md:gap-8 max-w-[1200px] mx-auto p-4 md:p-8">
-      
+
+      {revisionSummary && (
+        <div style={{ padding: '0.75rem 1rem', borderRadius: 8, background: 'rgba(37,208,171,0.08)', border: '1px solid rgba(37,208,171,0.25)', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+          <strong style={{ color: 'var(--color-mint)' }}>Plan Re-synced:</strong> {revisionSummary}
+        </div>
+      )}
+
       {/* ── HEADER ── */}
       <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
         <div>
@@ -447,6 +479,15 @@ export default function MasterPlanPage() {
           >
             {classifying ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Tag size={13} />}
             {classifying ? 'Classifying...' : classifiedCount > 0 ? `Classified (${classifiedCount})` : 'Classify Tasks'}
+          </button>
+          <button
+            className="btn-ghost"
+            onClick={handleRevisePlan}
+            disabled={revising}
+            style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            {revising ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Brain size={13} />}
+            {revising ? 'Re-syncing...' : 'AI Re-sync Plan'}
           </button>
           <button
             className="btn-ghost"

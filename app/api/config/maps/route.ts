@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const browserKey =
     process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY ||
     process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+    process.env.GOOGLE_MAPS_API_KEY ||
     '';
 
   return NextResponse.json({ apiKey: browserKey });

@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { MasterPlan, SimulationResult, EventData, TaskCategory, TaskSourcingResult, SourcingRecommendation } from '@/store/eventStore';
+import type { MasterPlan, SimulationResult, EventData, TaskCategory, TaskSourcingResult, SourcingRecommendation, Task, RiskItem } from '@/store/eventStore';
 import { researchVenueOrVendor, deepResearch, sourceForTaskCategory } from './you';
 import { detectTaskCategory, getAgentConfig } from './task-agents';
 
@@ -818,4 +818,206 @@ export async function runAutoResolvePipeline(
   }
 
   return resolved;
+}
+
+export interface PlanRevisionDelta {
+  description: string;
+  changes?: {
+    venue?: string;
+    timeline?: string;
+    budget?: string;
+    participants?: number;
+    scale?: string;
+    constraints?: string;
+    [key: string]: string | number | undefined;
+  };
+}
+
+export interface PlanRevisionDiff {
+  summary: string;
+  addedTasks: Array<{ divisionId: string; divisionName: string; task: Partial<Task> & { title: string; description: string } }>;
+  removedTaskIds: string[];
+  updatedTasks: Array<{ taskId: string; changes: Record<string, string> }>;
+  timelineUpdates: Array<{ date: string; milestone: string; phase: string; responsible: string }>;
+  riskUpdates: Array<{ id: string; scenario: string; severity: string; probability: string; mitigation: string }>;
+  criticalPath?: string[];
+}
+
+export async function reviseEventMasterPlan(
+  masterPlan: MasterPlan,
+  eventData: Partial<EventData>,
+  delta: PlanRevisionDelta,
+  lang: 'en' | 'id' = 'id'
+): Promise<{ diff: PlanRevisionDiff; revisedMasterPlan: MasterPlan }> {
+  const langInstruction = lang === 'en'
+    ? 'Write all new text in English.'
+    : 'Tulis semua teks baru dalam Bahasa Indonesia.';
+
+  if (!process.env.GEMINI_API_KEY) {
+    return {
+      diff: {
+        summary: 'Mock revision — no API key configured.',
+        addedTasks: [],
+        removedTaskIds: [],
+        updatedTasks: [],
+        timelineUpdates: [],
+        riskUpdates: [],
+      },
+      revisedMasterPlan: masterPlan,
+    };
+  }
+
+  const allTasks = masterPlan.divisions.flatMap(d =>
+    d.tasks.map(t => ({ id: t.id, title: t.title, division: d.name, status: t.status, deadline: t.deadline }))
+  );
+
+  const prompt = `You are RunIT's Dynamic Revision Engine. The event plan changed and you must produce a DAG diff — what tasks to add, remove, or update.
+
+${langInstruction}
+
+## Current Event
+Name: ${eventData.name} | Type: ${eventData.type}
+Venue: ${eventData.venue} | Timeline: ${eventData.timeline}
+Budget: ${eventData.budget} | Participants: ${eventData.participants}
+
+## Change Delta (what changed)
+${delta.description}
+${delta.changes ? JSON.stringify(delta.changes, null, 2) : ''}
+
+## Current Master Plan Summary
+${masterPlan.summary}
+
+## Current Tasks (${allTasks.length} total)
+${allTasks.map(t => `- [${t.id}] ${t.title} (${t.division}, ${t.deadline}, ${t.status})`).join('\n')}
+
+## Current Timeline
+${masterPlan.timeline.map(t => `- ${t.date}: ${t.milestone}`).join('\n')}
+
+## Current Risks
+${masterPlan.risks.map(r => `- ${r.scenario} (${r.severity})`).join('\n')}
+
+Produce a surgical revision — only change what the delta requires. Preserve task IDs for unchanged tasks. New tasks need unique ids like "rev-{timestamp}-{n}".
+
+Return ONLY valid JSON:
+{
+  "summary": "Brief explanation of revision impact",
+  "addedTasks": [
+    { "divisionId": "existing-div-id", "divisionName": "Division Name", "task": { "id": "rev-new-1", "title": "...", "description": "...", "deadline": "H-14", "priority": "high", "status": "pending", "dependencies": [], "divisionId": "..." } }
+  ],
+  "removedTaskIds": ["task-id-to-remove"],
+  "updatedTasks": [
+    { "taskId": "existing-id", "changes": { "deadline": "H-7", "description": "updated desc" } }
+  ],
+  "timelineUpdates": [
+    { "date": "H-30", "milestone": "...", "phase": "...", "responsible": "..." }
+  ],
+  "riskUpdates": [
+    { "id": "r-new-1", "scenario": "...", "severity": "high", "probability": "medium", "mitigation": "..." }
+  ],
+  "criticalPath": ["task flow updated"],
+  "revisedSummary": "Updated master plan summary paragraph"
+}`;
+
+  try {
+    const text = await generateWithFallback(prompt, true);
+    const cleaned = text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+
+    const diff: PlanRevisionDiff = {
+      summary: parsed.summary || delta.description,
+      addedTasks: parsed.addedTasks || [],
+      removedTaskIds: parsed.removedTaskIds || [],
+      updatedTasks: parsed.updatedTasks || [],
+      timelineUpdates: parsed.timelineUpdates || [],
+      riskUpdates: parsed.riskUpdates || [],
+      criticalPath: parsed.criticalPath,
+    };
+
+    const revisedMasterPlan: MasterPlan = JSON.parse(JSON.stringify(masterPlan));
+
+    if (parsed.revisedSummary) {
+      revisedMasterPlan.summary = parsed.revisedSummary;
+    }
+
+    if (delta.changes?.venue && typeof delta.changes.venue === 'string') {
+      revisedMasterPlan.eventName = revisedMasterPlan.eventName;
+    }
+
+    for (const taskId of diff.removedTaskIds) {
+      for (const div of revisedMasterPlan.divisions) {
+        div.tasks = div.tasks.filter(t => t.id !== taskId);
+      }
+    }
+
+    for (const upd of diff.updatedTasks) {
+      for (const div of revisedMasterPlan.divisions) {
+        const task = div.tasks.find(t => t.id === upd.taskId);
+        if (task) {
+          Object.assign(task, upd.changes);
+        }
+      }
+    }
+
+    for (const add of diff.addedTasks) {
+      let div = revisedMasterPlan.divisions.find(d => d.id === add.divisionId || d.name === add.divisionName);
+      if (!div) {
+        div = {
+          id: add.divisionId || `div-rev-${Date.now()}`,
+          name: add.divisionName || 'Revision',
+          pic: 'TBD',
+          color: '#6366f1',
+          tasks: [],
+        };
+        revisedMasterPlan.divisions.push(div);
+      }
+      const newTask = {
+        id: add.task.id || `rev-${Date.now()}`,
+        title: add.task.title,
+        description: add.task.description || '',
+        deadline: add.task.deadline || 'H-14',
+        priority: (add.task.priority as Task['priority']) || 'medium',
+        status: 'pending' as const,
+        dependencies: add.task.dependencies || [],
+        divisionId: div.id,
+      };
+      div.tasks.push(newTask);
+    }
+
+    if (diff.timelineUpdates.length) {
+      for (const tl of diff.timelineUpdates) {
+        const existing = revisedMasterPlan.timeline.findIndex(t => t.date === tl.date);
+        if (existing >= 0) {
+          revisedMasterPlan.timeline[existing] = tl;
+        } else {
+          revisedMasterPlan.timeline.push(tl);
+        }
+      }
+      revisedMasterPlan.timeline.sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    if (diff.riskUpdates.length) {
+      for (const risk of diff.riskUpdates) {
+        const idx = revisedMasterPlan.risks.findIndex(r => r.id === risk.id);
+        const riskItem = {
+          id: risk.id,
+          scenario: risk.scenario,
+          severity: risk.severity as RiskItem['severity'],
+          probability: risk.probability as RiskItem['probability'],
+          mitigation: risk.mitigation,
+        };
+        if (idx >= 0) revisedMasterPlan.risks[idx] = riskItem;
+        else revisedMasterPlan.risks.push(riskItem);
+      }
+    }
+
+    if (diff.criticalPath?.length) {
+      revisedMasterPlan.criticalPath = diff.criticalPath;
+    }
+
+    return { diff, revisedMasterPlan };
+  } catch (error) {
+    console.error('[RevisePlan] Failed:', error);
+    throw new Error('Failed to generate plan revision');
+  }
 }

@@ -7,19 +7,20 @@ import { useEffect, useRef, useState } from 'react';
 import { useEventStore } from '@/store/eventStore';
 import {
   LayoutDashboard, Bot, FileText, ArrowLeft, Globe,
-  KanbanSquare, FileBarChart, Shield, Loader2, Search
+  KanbanSquare, FileBarChart, Shield, Loader2, Search, Radio, Users
 } from 'lucide-react';
 import { useLangStore } from '@/store/langStore';
 import { dict } from '@/lib/i18n';
 import BrandLogo from '@/components/BrandLogo';
 
-/* ── Stage config ─────────────────────────────────────────────── */
 const STAGE_COLOR: Record<string, string> = {
   overview:   'var(--color-mint)',
   committee:  'var(--color-stage-copilot, #7C6AF5)',
   'master-plan': 'var(--color-stage-masterplan, #25D0AB)',
   execution:  'var(--color-stage-live, #55B467)',
   simulate:   'var(--color-stage-simulate, #FBBF24)',
+  live:       'var(--color-red, #FF6369)',
+  team:       '#7C6AF5',
   research:   'var(--color-teal, #00ADB5)',
   report:     'var(--color-stage-report, #A0A0A0)',
 };
@@ -30,11 +31,12 @@ const STAGE_BG: Record<string, string> = {
   'master-plan': 'rgba(37,208,171,0.07)',
   execution:  'rgba(85,180,103,0.07)',
   simulate:   'rgba(251,191,36,0.07)',
+  live:       'rgba(255,99,105,0.08)',
+  team:       'rgba(124,106,245,0.08)',
   research:   'rgba(0,173,181,0.08)',
   report:     'rgba(160,160,160,0.07)',
 };
 
-/* ── Layout ───────────────────────────────────────────────────── */
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { currentEvent, listenToEvent, saveCurrentEvent } = useEventStore();
@@ -49,7 +51,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const workspaceId  = pathParts[2];
   const currentPage  = pathParts[3] || 'overview';
 
-  // ── Firestore real-time listener ──────────────────────────────
   useEffect(() => {
     if (!workspaceId) return;
     setIsLoadingEvent(true);
@@ -68,7 +69,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     };
   }, [workspaceId, listenToEvent]);
 
-  // ── Auto-save on every state change (debounced 2s) ───────────
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!currentEvent) return;
@@ -81,12 +81,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     };
   }, [currentEvent, saveCurrentEvent]);
 
-  // ── Auto-translate when language changes ─────────────────────
   useEffect(() => {
     const handleTranslate = async () => {
       if (!currentEvent || !currentEvent.masterPlan) return;
-      // If dataLanguage is not set, we assume it was generated in the current lang initially.
-      // But if it's set and different from the UI lang, translate it!
       if (currentEvent.dataLanguage && currentEvent.dataLanguage !== lang) {
         setIsTranslatingData(true);
         try {
@@ -112,17 +109,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     handleTranslate();
   }, [lang, currentEvent?.dataLanguage, currentEvent?.masterPlan, currentEvent?.id]);
 
-
-
-  /* Map old/sub pages to their canonical parent */
   const pageAliases: Record<string, string> = {
     'agent':        'committee',
     'agent-pilot':  'committee',
     'tasks':        'execution',
     'dependencies': 'execution',
-    'live':         'execution',
-    'incident':     'execution',
-    'prepare':      'execution',
+    'live':         'live',
+    'incident':     'live',
+    'prepare':      'committee',
     'sponsor':      'research',
   };
   const canonicalPage = pageAliases[currentPage] || currentPage;
@@ -132,15 +126,16 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     { href: 'committee',  label: t.sideAiCommittee,   icon: Bot },
     { href: 'master-plan',  label: t.sideMasterPlan,     icon: FileText },
     { href: 'execution',  label: 'Execution',         icon: KanbanSquare },
+    { href: 'team',       label: 'Team',              icon: Users },
     { href: 'simulate',   label: t.sideSimulation,    icon: Shield },
+    { href: 'live',       label: t.sideLiveMode,      icon: Radio },
     { href: 'research',   label: 'Research Hub',      icon: Search },
     { href: 'report',     label: t.sideReport,        icon: FileBarChart },
   ];
 
-  const stageOrder   = ['overview', 'committee', 'master-plan', 'execution', 'simulate', 'research', 'report'];
+  const stageOrder   = ['overview', 'committee', 'master-plan', 'execution', 'team', 'simulate', 'live', 'research', 'report'];
   const currentIndex = stageOrder.indexOf(canonicalPage);
 
-  // ── Loading skeleton while Firestore hydrates ─────────────────
   if (isLoadingEvent && !currentEvent) {
     return (
       <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--color-ground-0)', flexDirection: 'column', gap: '1rem' }}>
@@ -151,268 +146,116 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{
-      display: 'flex', height: '100vh', overflow: 'hidden',
-      background: 'var(--color-ground-0)', position: 'relative',
-    }}>
-      {/* ═══════════════════════════════════════════════════
-          SIDEBAR
-          ═══════════════════════════════════════════════════ */}
-      <aside style={{
-        width: 'var(--sidebar-width)', flexShrink: 0,
-        borderRight: '1px solid var(--color-border)',
-        display: 'flex', flexDirection: 'column',
-        background: 'var(--color-ground-1)',
-        zIndex: 10, position: 'relative',
-      }}>
+    <div className="colosseum-app">
+      <div className="grid-bg" />
 
-        {/* Logo row */}
-        <div style={{
-          height: 'var(--nav-height)',
-          padding: '0 var(--space-lg)',
-          borderBottom: '1px solid var(--color-border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexShrink: 0,
-        }}>
-          <BrandLogo href="/" size={30} />
+      <header className="colosseum-app__header">
+        <BrandLogo href="/workspace" size={28} />
+        {currentEvent && (
+          <>
+            <span className="colosseum-app__header-divider hidden sm:block" />
+            <span className="colosseum-app__event-name hidden sm:block">{currentEvent.name}</span>
+          </>
+        )}
+        <div className="colosseum-app__header-spacer" />
+        <div className="colosseum-app__header-actions">
+          <span className="colosseum-app__status">
+            <span className="pulse-dot" style={{ color: 'var(--color-mint)', width: 6, height: 6, borderRadius: '50%' }} />
+            {t.sideSystemConnected}
+          </span>
           <button
+            type="button"
             onClick={toggleLang}
             className="btn-ghost"
-            style={{ height: 26, padding: '0 var(--space-xs)', gap: 4, fontSize: 'var(--text-caption)' }}
+            style={{ height: 30, padding: '0 0.55rem', gap: 4, fontSize: '0.8rem' }}
             aria-label="Toggle language"
           >
-            <Globe size={13} />
+            <Globe size={14} />
             {lang.toUpperCase()}
           </button>
-        </div>
-
-        {/* Active project banner */}
-        {currentEvent && (
-          <div style={{
-            padding: 'var(--space-md) var(--space-lg)',
-            borderBottom: '1px solid var(--color-border)',
-            flexShrink: 0,
-          }}>
-            <div style={{
-              fontSize: 'var(--text-caption)',
-              color: 'var(--color-text-muted)',
-              marginBottom: 'var(--space-2xs)',
-              display: 'flex', alignItems: 'center', gap: 'var(--space-xs)',
-              textTransform: 'uppercase', letterSpacing: '0.05em'
-            }}>
-              {t.sideActiveProject}
-            </div>
-            <p style={{
-              fontSize: 'var(--text-body-sm)', fontWeight: 600,
-              color: 'var(--color-text-primary)',
-              lineHeight: 1.3, overflow: 'hidden',
-              textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              marginBottom: 'var(--space-xs)',
-            }}>
-              {currentEvent.name}
-            </p>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              padding: '2px 8px', borderRadius: '12px',
-              background: `${STAGE_COLOR[canonicalPage] || 'var(--color-mint)'}15`,
-              border: `1px solid ${STAGE_COLOR[canonicalPage] || 'var(--color-mint)'}30`,
-              fontSize: '0.7rem', fontWeight: 500,
-              color: STAGE_COLOR[canonicalPage] || 'var(--color-mint)'
-            }}>
-              <span className="pulse-dot" style={{
-                color: STAGE_COLOR[canonicalPage] || 'var(--color-mint)',
-                width: 6, height: 6,
-              }} />
-              {navItems.find(i => i.href === canonicalPage)?.label || currentEvent.stage}
-            </div>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <nav style={{
-          flex: 1, padding: 'var(--space-lg) var(--space-xs)',
-          overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2,
-        }}>
-          <div style={{
-            fontSize: 'var(--text-label)', fontWeight: 600,
-            color: 'var(--color-text-muted)',
-            letterSpacing: '0.05em', textTransform: 'uppercase',
-            padding: 'var(--space-xs) var(--space-sm)',
-            marginBottom: 'var(--space-xs)',
-          }}>
-            WORKFLOW
-          </div>
-
-          {navItems.map((item, i) => {
-            const isActive    = canonicalPage === item.href;
-            const isCompleted = i < currentIndex;
-            const isDisabled  = !currentEvent && !['overview'].includes(item.href);
-            const stageColor  = STAGE_COLOR[item.href] || 'var(--color-text-muted)';
-
-            return (
-              <Link
-                key={item.href}
-                href={`/workspace/${workspaceId}/${item.href}`}
-                aria-current={isActive ? 'page' : undefined}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 'var(--space-sm)',
-                  padding: '0.5rem var(--space-sm)',
-                  borderRadius: '6px',
-                  marginBottom: 2, textDecoration: 'none',
-                  background: isActive ? STAGE_BG[item.href] : 'transparent',
-                  color: isActive ? stageColor : isCompleted ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
-                  border: isActive ? `1px solid ${stageColor}30` : '1px solid transparent',
-                  transition: 'all 0.15s ease',
-                  pointerEvents: isDisabled ? 'none' : 'auto',
-                  opacity: isDisabled ? 0.35 : 1,
-                  fontSize: '0.85rem',
-                  fontWeight: isActive ? 600 : 500,
-                  position: 'relative',
-                }}
-              >
-                <item.icon size={16} style={{ flexShrink: 0, color: isActive ? stageColor : 'inherit' }} />
-                <span style={{ flex: 1, lineHeight: 1 }}>{item.label}</span>
-                {isCompleted && !isActive && (
-                  <span style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: 'var(--color-text-muted)', flexShrink: 0,
-                  }} />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Footer */}
-        <div style={{
-          padding: 'var(--space-sm)',
-          borderTop: '1px solid var(--color-border)',
-          flexShrink: 0,
-        }}>
-          <Link href="/workspace" style={{ textDecoration: 'none' }}>
-            <button className="btn-ghost" style={{
-              width: '100%', justifyContent: 'flex-start',
-              gap: 'var(--space-xs)', fontSize: '0.85rem', fontWeight: 500
-            }}>
-              <ArrowLeft size={16} />
-              {t.navBackToWorkspace}
-            </button>
+          <Link href="/workspace" className="btn-ghost hidden md:inline-flex" style={{ height: 30, padding: '0 0.65rem', gap: 6, fontSize: '0.8rem', textDecoration: 'none' }}>
+            <ArrowLeft size={14} />
+            {t.navBackToWorkspace}
           </Link>
         </div>
-      </aside>
+      </header>
 
-      {/* ═══════════════════════════════════════════════════
-          MAIN CONTENT
-          ═══════════════════════════════════════════════════ */}
-      <main style={{
-        flex: 1, overflow: 'auto',
-        position: 'relative', zIndex: 1,
-        padding: 'var(--space-xl)',
-        display: 'flex', flexDirection: 'column', gap: '1.5rem',
-        background: 'var(--color-ground-0)'
-      }}>
-
-        {/* Stage header panel */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <div style={{
-            display: 'flex', alignItems: 'stretch',
-            background: 'var(--color-ground-1)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-          }}>
-            {/* Stage label */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              padding: '1rem 1.25rem',
-              borderRight: '1px solid var(--color-border)',
-              flexShrink: 0,
-            }}>
-              <span style={{
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                color: STAGE_COLOR[canonicalPage] || 'var(--color-text-primary)',
-              }}>
-                {navItems.find(i => i.href === canonicalPage)?.label || 'Workspace'}
-              </span>
-            </div>
-
-            {/* Stage breadcrumb */}
-            <div style={{
-              flex: 1, display: 'flex', alignItems: 'center',
-              padding: '0 1.25rem', gap: '0.75rem',
-              overflowX: 'auto',
-            }}>
-              {stageOrder.map((stage, i) => {
-                const isActive = stage === canonicalPage;
-                const isPast   = i < currentIndex;
-                const stageLabel = navItems.find(item => item.href === stage)?.label || stage;
-
-                return (
-                  <div key={stage} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                    <span style={{
-                      fontSize: '0.8rem',
-                      whiteSpace: 'nowrap',
-                      color: isActive
-                        ? STAGE_COLOR[stage]
-                        : isPast
-                        ? 'var(--color-text-primary)'
-                        : 'var(--color-text-muted)',
-                      fontWeight: isActive ? 600 : 500,
-                    }}>
-                      {stageLabel}
-                    </span>
-                    {i < stageOrder.length - 1 && (
-                      <span style={{ color: 'var(--color-border)' }}>/</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Status badge */}
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              padding: '0 1.25rem',
-              borderLeft: '1px solid var(--color-border)',
-              flexShrink: 0,
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '4px 10px', borderRadius: '16px',
-                  background: `${STAGE_COLOR[canonicalPage] || 'var(--color-mint)'}15`,
-                  border: `1px solid ${STAGE_COLOR[canonicalPage] || 'var(--color-mint)'}30`,
-                  fontSize: '0.75rem', fontWeight: 500, color: STAGE_COLOR[canonicalPage] || 'var(--color-mint)'
-                }}>
-                <span className="pulse-dot" style={{ color: STAGE_COLOR[canonicalPage], width: 6, height: 6, borderRadius: '50%' }} />
-                {t.sideSystemConnected}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Page content */}
-        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-          {isTranslatingData && (
-            <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(4px)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              zIndex: 50, borderRadius: '8px'
-            }}>
-              <Loader2 size={32} color="var(--color-mint)" style={{ animation: 'spin 1.5s linear infinite', marginBottom: '1rem' }} />
-              <p style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontSize: '1.1rem' }}>
-                Translating Master Plan...
-              </p>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                Applying AI translation to match {lang.toUpperCase()} interface.
-              </p>
+      <div className="colosseum-app__body">
+        <aside className="colosseum-app__sidebar">
+          {currentEvent && (
+            <div className="colosseum-app__sidebar-project">
+              <div className="colosseum-app__sidebar-label">{t.sideActiveProject}</div>
+              <p className="colosseum-app__sidebar-title">{currentEvent.name}</p>
             </div>
           )}
-          {children}
-        </div>
-      </main>
+
+          <nav className="colosseum-app__nav" aria-label="Workflow">
+            <div className="colosseum-app__nav-label">Workflow</div>
+            {navItems.map((item, i) => {
+              const isActive    = canonicalPage === item.href;
+              const isCompleted = i < currentIndex;
+              const isDisabled  = !currentEvent && !['overview'].includes(item.href);
+              const stageColor  = STAGE_COLOR[item.href] || 'var(--color-text-muted)';
+
+              return (
+                <Link
+                  key={item.href}
+                  href={`/workspace/${workspaceId}/${item.href}`}
+                  aria-current={isActive ? 'page' : undefined}
+                  className="colosseum-app__nav-link"
+                  style={{
+                    background: isActive ? STAGE_BG[item.href] : 'transparent',
+                    color: isActive ? stageColor : isCompleted ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
+                    borderColor: isActive ? `${stageColor}30` : 'transparent',
+                    fontWeight: isActive ? 600 : 500,
+                    pointerEvents: isDisabled ? 'none' : 'auto',
+                    opacity: isDisabled ? 0.35 : 1,
+                  }}
+                >
+                  <item.icon size={16} style={{ flexShrink: 0, color: isActive ? stageColor : 'inherit' }} />
+                  <span style={{ flex: 1, lineHeight: 1.2 }}>{item.label}</span>
+                  {isCompleted && !isActive && (
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-text-muted)', flexShrink: 0 }} />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="colosseum-app__sidebar-footer md:hidden">
+            <Link href="/workspace" style={{ textDecoration: 'none' }}>
+              <button type="button" className="btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', gap: 'var(--space-xs)', fontSize: '0.85rem' }}>
+                <ArrowLeft size={16} />
+                {t.navBackToWorkspace}
+              </button>
+            </Link>
+          </div>
+        </aside>
+
+        <main className="colosseum-app__main">
+          <div className="colosseum-app__content">
+            <div className="project-page">
+              {isTranslatingData && (
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(4px)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  zIndex: 50, borderRadius: '8px',
+                }}>
+                  <Loader2 size={32} color="var(--color-mint)" style={{ animation: 'spin 1.5s linear infinite', marginBottom: '1rem' }} />
+                  <p style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontSize: '1.1rem' }}>
+                    Translating Master Plan...
+                  </p>
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                    Applying AI translation to match {lang.toUpperCase()} interface.
+                  </p>
+                </div>
+              )}
+              {children}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
