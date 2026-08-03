@@ -49,3 +49,6 @@ skills-lock.json
 
 # local drafts and scratch (canonical docs live in docs/)
 draft_bin/
+
+# dokumen organisasi internal - jangan masuk repo publik
+docs/gemini-xprize-2026/
